@@ -1,0 +1,48 @@
+{
+  "name": "lifewood-react",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint:types": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/leaflet": "^1.9.21",
+    "@types/three": "^0.183.0",
+    "@vitejs/plugin-react": "^5.1.4",
+    "jsdom": "^28.1.0",
+    "typescript": "~5.9.3",
+    "vite": "^7.3.1",
+    "vitest": "^4.0.18"
+  },
+  "dependencies": {
+    "@fortawesome/fontawesome-free": "^7.2.0",
+    "@gsap/react": "^2.1.2",
+    "@react-three/fiber": "^9.5.0",
+    "@sentry/react": "^10.40.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "firebase": "^12.10.0",
+    "gsap": "^3.14.2",
+    "leaflet": "^1.9.4",
+    "lenis": "^1.3.17",
+    "lottie-web": "^5.13.0",
+    "motion": "^12.34.2",
+    "ogl": "^1.0.11",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-helmet-async": "^2.0.5",
+    "react-hot-toast": "^2.6.0",
+    "react-leaflet": "^5.0.0",
+    "react-router-dom": "^7.13.0",
+    "three": "^0.183.0"
+  }
+}
