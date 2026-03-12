@@ -19,14 +19,14 @@ export interface LenisOptions {
  * Honors `prefers-reduced-motion` (skips init when reduced).
  * Returns `scrollTo`, a reactive `scrollY`, and the Lenis instance ref.
  */
-export function useLenis(options: LenisOptions = {}) {
+export function useLenis(options: LenisOptions | null = {}) {
   const reduced = useReducedMotion();
   const lenisRef = useRef<Lenis | null>(null);
   const rafId = useRef<number>(0);
   const [scrollY, setScrollY] = useState(0);
 
   useEffect(() => {
-    if (reduced) return;
+    if (reduced || options === null) return;
 
     const lenis = new Lenis({
       lerp: options.lerp ?? 0.1,

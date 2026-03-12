@@ -1,5 +1,5 @@
-import { lazy, Suspense, useState, useEffect, type FC } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { lazy, Suspense, useState, useEffect, useMemo, type FC } from 'react';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
@@ -72,18 +72,26 @@ const AnalyticsTracker: FC = () => {
   return null;
 };
 
-const App: FC = () => {
+/** Pages where heavy visual effects should be skipped for performance. */
+const LIGHT_PATHS = ['/admin', '/admin/login', '/privacy-policy', '/cookie-policy', '/terms-conditions'];
+
+function useIsLightPage() {
+  const { pathname } = useLocation();
+  return useMemo(() => LIGHT_PATHS.includes(pathname), [pathname]);
+}
+
+const AppInner: FC = () => {
   const isTouchDevice = useIsTouchDevice();
+  const isLightPage = useIsLightPage();
 
-  /* ── Smooth scroll (Lenis) ── */
-  useLenis({ lerp: 0.1, duration: 1.2 });
+  /* ── Smooth scroll (Lenis) — skip on light pages ── */
+  useLenis(isLightPage ? null : { lerp: 0.1, duration: 1.2 });
 
-  /* ── Legacy effects engine (hero glow, ripple, trails, etc.) ── */
-  useLegacyEffects();
+  /* ── Legacy effects engine — skip on admin/legal pages ── */
+  useLegacyEffects(isLightPage);
 
   return (
-    <BrowserRouter>
-      <AuthProvider>
+    <>
       <AnalyticsTracker />
       <SkipToMain />
       <StructuredData />
@@ -91,13 +99,16 @@ const App: FC = () => {
       <ScrollProgress />
       <PageTransition />
 
-      {/* ── Global fluid cursor effect (desktop only) ── */}
-      {!isTouchDevice && (
+      {/* ── Global fluid cursor effect (desktop only, skip on light pages) ── */}
+      {!isTouchDevice && !isLightPage && (
         <ErrorBoundary>
           <Suspense fallback={null}>
             <SplashCursor
+              SIM_RESOLUTION={128}
+              DYE_RESOLUTION={1024}
               DENSITY_DISSIPATION={3.5}
               VELOCITY_DISSIPATION={2}
+              PRESSURE_ITERATIONS={16}
               SPLAT_RADIUS={0.2}
               CURL={3}
               SPLAT_FORCE={6000}
@@ -163,9 +174,16 @@ const App: FC = () => {
       <Footer />
       <CookieConsent />
       </ClickSpark>
-      </AuthProvider>
-    </BrowserRouter>
+    </>
   );
 };
+
+const App: FC = () => (
+  <BrowserRouter>
+    <AuthProvider>
+      <AppInner />
+    </AuthProvider>
+  </BrowserRouter>
+);
 
 export default App;

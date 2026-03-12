@@ -78,50 +78,50 @@ const ClickSpark: FC<ClickSparkProps> = ({
     [easing]
   );
 
-  useEffect(() => {
+  const animIdRef = useRef<number>(0);
+  const isRunningRef = useRef(false);
+
+  const startDraw = useCallback(() => {
+    if (isRunningRef.current) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-
-    let animationId: number;
+    isRunningRef.current = true;
 
     const draw = (timestamp: number) => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-
       sparksRef.current = sparksRef.current.filter((spark) => {
         const elapsed = timestamp - spark.startTime;
         if (elapsed >= duration) return false;
-
         const progress = elapsed / duration;
         const eased = easeFunc(progress);
         const distance = eased * sparkRadius * extraScale;
         const lineLength = sparkSize * (1 - eased);
-
         const x1 = spark.x + distance * Math.cos(spark.angle);
         const y1 = spark.y + distance * Math.sin(spark.angle);
         const x2 = spark.x + (distance + lineLength) * Math.cos(spark.angle);
         const y2 = spark.y + (distance + lineLength) * Math.sin(spark.angle);
-
         ctx.strokeStyle = sparkColor;
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(x1, y1);
         ctx.lineTo(x2, y2);
         ctx.stroke();
-
         return true;
       });
-
-      animationId = requestAnimationFrame(draw);
+      if (sparksRef.current.length > 0) {
+        animIdRef.current = requestAnimationFrame(draw);
+      } else {
+        isRunningRef.current = false;
+      }
     };
+    animIdRef.current = requestAnimationFrame(draw);
+  }, [sparkColor, sparkSize, sparkRadius, duration, easeFunc, extraScale]);
 
-    animationId = requestAnimationFrame(draw);
-
-    return () => {
-      cancelAnimationFrame(animationId);
-    };
-  }, [sparkColor, sparkSize, sparkRadius, sparkCount, duration, easeFunc, extraScale]);
+  useEffect(() => {
+    return () => cancelAnimationFrame(animIdRef.current);
+  }, []);
 
   const handleClick = (e: MouseEvent<HTMLDivElement>) => {
     const canvas = canvasRef.current;
@@ -139,6 +139,7 @@ const ClickSpark: FC<ClickSparkProps> = ({
     }));
 
     sparksRef.current.push(...newSparks);
+    startDraw();
   };
 
   return (

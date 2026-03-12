@@ -58,7 +58,7 @@ function effectsDisabled() {
  * Core effects hook. Call once at the App root level.
  * Attaches all global DOM-based effects and cleans up on unmount.
  */
-export function useLegacyEffects() {
+export function useLegacyEffects(skip = false) {
   const reduced = useReducedMotion();
   const cleanups = useRef<Array<() => void>>([]);
 
@@ -67,7 +67,7 @@ export function useLegacyEffects() {
   }, []);
 
   useEffect(() => {
-    if (reduced || effectsDisabled()) return;
+    if (reduced || skip || effectsDisabled()) return;
 
     injectEffectsCSS();
 
@@ -191,7 +191,9 @@ export function useLegacyEffects() {
       ];
 
       let blobRaf = 0;
+      let blobPaused = false;
       const drawBlobs = (time: number) => {
+        if (blobPaused) { blobRaf = requestAnimationFrame(drawBlobs); return; }
         ctx.clearRect(0, 0, blobCanvas.width, blobCanvas.height);
         blobs.forEach((b) => {
           b.x += Math.sin(time * b.dx) * 0.001;
@@ -212,9 +214,14 @@ export function useLegacyEffects() {
       };
       blobRaf = requestAnimationFrame(drawBlobs);
 
+      /* Pause blob animation when tab is hidden */
+      const onVisChange = () => { blobPaused = document.hidden; };
+      document.addEventListener('visibilitychange', onVisChange);
+
       addCleanup(() => {
         cancelAnimationFrame(blobRaf);
         window.removeEventListener('resize', resizeBlob);
+        document.removeEventListener('visibilitychange', onVisChange);
         blobCanvas.remove();
       });
     }
@@ -358,7 +365,9 @@ export function useLegacyEffects() {
         let lastScroll = window.scrollY;
         let velocity = 0;
         let velRaf = 0;
+        let velPaused = false;
         const velUpdate = () => {
+          if (velPaused) { velRaf = requestAnimationFrame(velUpdate); return; }
           const diff = Math.abs(window.scrollY - lastScroll);
           velocity += (diff - velocity) * 0.15;
           lastScroll = window.scrollY;
@@ -372,7 +381,9 @@ export function useLegacyEffects() {
           velRaf = requestAnimationFrame(velUpdate);
         };
         velRaf = requestAnimationFrame(velUpdate);
-        addCleanup(() => cancelAnimationFrame(velRaf));
+        const onVelVis = () => { velPaused = document.hidden; };
+        document.addEventListener('visibilitychange', onVelVis);
+        addCleanup(() => { cancelAnimationFrame(velRaf); document.removeEventListener('visibilitychange', onVelVis); });
       }
     }
 
@@ -555,5 +566,5 @@ export function useLegacyEffects() {
       cleanups.current = [];
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reduced]);
+  }, [reduced, skip]);
 }
