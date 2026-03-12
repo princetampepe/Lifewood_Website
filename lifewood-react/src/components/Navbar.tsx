@@ -65,7 +65,7 @@ const Navbar: FC = () => {
   return (
     <nav className={`navbar ${scrolled ? 'scrolled' : ''}`} role="navigation" aria-label="Main navigation">
       <Link to="/" className="logo" aria-label="Go to homepage">
-        <img src="/lifewood official logo/use this.png" alt="Lifewood Data Technology" />
+        <img src="/lifewood official logo/use this.png" alt="Lifewood Data Technology" width="42" height="42" fetchPriority="high" />
       </Link>
 
       <button

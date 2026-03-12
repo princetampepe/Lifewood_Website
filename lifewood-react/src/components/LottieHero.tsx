@@ -34,7 +34,7 @@ const LottieHero: FC<LottieHeroProps> = ({
   fallbackSvg,
 }) => {
   const reduced = useReducedMotion();
-  const { ref: inViewRef, isVisible } = useInView({ threshold: 0.1 });
+  const { ref: inViewRef, isVisible } = useInView(0.1);
   const containerRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState(false);
   const animRef = useRef<ReturnType<typeof import('lottie-web').default.loadAnimation> | null>(null);

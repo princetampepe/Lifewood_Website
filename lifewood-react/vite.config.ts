@@ -13,23 +13,31 @@ export default defineConfig({
     /* Chunk splitting for better caching & smaller initial bundle */
     rollupOptions: {
       output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom', 'react-router-dom'],
-          animations: ['gsap', 'lenis', 'motion'],
-          three: ['three', '@react-three/fiber', 'ogl'],
-          maps: ['leaflet', 'react-leaflet'],
-          monitoring: ['@sentry/react'],
-          ui: ['react-hot-toast'],
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('firebase')) return 'firebase';
+            if (id.includes('react-dom') || id.includes('react-router-dom') || id.includes('react-hot-toast') || id.includes('react-helmet-async')) return 'vendor';
+            if (id.includes('gsap') || id.includes('lenis') || id.includes('motion')) return 'animations';
+            if (id.includes('three') || id.includes('@react-three') || id.includes('ogl')) return 'three';
+            if (id.includes('leaflet') || id.includes('react-leaflet')) return 'maps';
+            if (id.includes('@sentry')) return 'monitoring';
+          }
         },
       },
     },
-    sourcemap: true,
+    sourcemap: false,          // no sourcemaps in production
     target: 'es2022',
-    /* Image assets: inline small files, hash larger ones for cache busting */
-    assetsInlineLimit: 4096,  // inline assets smaller than 4kb
-    cssCodeSplit: true,        // split CSS per chunk for faster initial load
+    assetsInlineLimit: 4096,
+    cssCodeSplit: true,
+    cssMinify: 'esbuild',
     minify: 'esbuild',
-    reportCompressedSize: false, // speeds up build
+    reportCompressedSize: false,
+    chunkSizeWarningLimit: 600, // warn on large chunks
+    modulePreload: { polyfill: false }, // modern browsers support module preload natively
+  },
+  /* Optimise dependency pre-bundling */
+  optimizeDeps: {
+    include: ['react', 'react-dom', 'react-router-dom', 'react-helmet-async', 'react-hot-toast'],
   },
   /* Asset handling for images */
   assetsInclude: ['**/*.webp', '**/*.avif', '**/*.png', '**/*.jpg', '**/*.jpeg', '**/*.gif', '**/*.svg'],

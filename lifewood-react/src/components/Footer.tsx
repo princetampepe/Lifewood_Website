@@ -1,8 +1,10 @@
-import type { FC } from 'react';
+import { memo, type FC } from 'react';
 import { Link } from 'react-router-dom';
 import { socialLinks } from '../data/siteData';
 
-const Footer: FC = () => {
+const currentYear = new Date().getFullYear();
+
+const Footer: FC = memo(() => {
   const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
 
   return (
@@ -61,7 +63,7 @@ const Footer: FC = () => {
           </div>
 
           <div className="copyright">
-            <div>&copy; {new Date().getFullYear()} Lifewood Data Technology — All Rights Reserved</div>
+            <div>&copy; {currentYear} Lifewood Data Technology — All Rights Reserved</div>
             <Link to="/admin/login" className="admin-footer-link" aria-label="Admin login">
               <i className="fas fa-lock" />
             </Link>
@@ -70,6 +72,8 @@ const Footer: FC = () => {
       </footer>
     </>
   );
-};
+});
+
+Footer.displayName = 'Footer';
 
 export default Footer;

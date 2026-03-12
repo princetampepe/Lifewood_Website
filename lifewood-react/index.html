@@ -10,17 +10,25 @@
     <meta name="color-scheme" content="light" />
     <title>Lifewood — AI-Powered Data Solutions</title>
 
+    <!-- DNS prefetch for third-party origins -->
+    <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
+    <link rel="dns-prefetch" href="https://www.google-analytics.com" />
+
     <!-- Preconnect to font origins for faster loading -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preconnect" href="https://cdnjs.cloudflare.com" />
 
+    <!-- Preload hero logo for LCP -->
+    <link rel="preload" as="image" href="/lifewood official logo/use this.png" />
+
+    <!-- Google Fonts — only needed weights, display=swap -->
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" onload="this.onload=null;this.rel='stylesheet'" />
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" /></noscript>
+
     <!-- Font Awesome (deferred — non-blocking) -->
     <link rel="preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" onload="this.onload=null;this.rel='stylesheet'" />
     <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" /></noscript>
-
-    <!-- Google Fonts with display=swap for FOUT instead of FOIT -->
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
 
     <!-- Google Analytics (consent-gated via CookieConsent component) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-VGF1ER5XMB"></script>
@@ -29,7 +37,7 @@
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
       gtag('consent', 'default', { analytics_storage: 'denied' });
-      gtag('config', 'G-VGF1ER5XMB', { anonymize_ip: true });
+      gtag('config', 'G-VGF1ER5XMB', { anonymize_ip: true, send_page_view: false });
     </script>
   </head>
   <body>

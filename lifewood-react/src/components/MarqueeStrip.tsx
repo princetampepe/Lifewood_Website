@@ -1,11 +1,11 @@
-import type { FC } from 'react';
+import { memo, type FC } from 'react';
 
 interface MarqueeStripProps {
   items: string[];
   reverse?: boolean;
 }
 
-const MarqueeStrip: FC<MarqueeStripProps> = ({ items, reverse = false }) => {
+const MarqueeStrip: FC<MarqueeStripProps> = memo(({ items, reverse = false }) => {
   const doubled = [...items, ...items];
 
   return (
@@ -19,6 +19,8 @@ const MarqueeStrip: FC<MarqueeStripProps> = ({ items, reverse = false }) => {
       </div>
     </div>
   );
-};
+});
+
+MarqueeStrip.displayName = 'MarqueeStrip';
 
 export default MarqueeStrip;
