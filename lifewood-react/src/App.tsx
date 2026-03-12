@@ -11,6 +11,8 @@ import ErrorBoundary from './components/ErrorBoundary';
 import SkipToMain from './components/SkipToMain';
 import CookieConsent from './components/CookieConsent';
 import StructuredData from './components/StructuredData';
+import ProtectedRoute from './components/ProtectedRoute';
+import { AuthProvider } from './hooks/useAuth';
 
 import { useAnalytics } from './hooks/useAnalytics';
 // Theme: light only (dark mode removed)
@@ -53,6 +55,8 @@ const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'));
 const CookiePolicyPage = lazy(() => import('./pages/CookiePolicyPage'));
 const TermsConditionsPage = lazy(() => import('./pages/TermsConditionsPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
+const AdminLoginPage = lazy(() => import('./pages/AdminLoginPage'));
+const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage'));
 
 /* ── Loading fallback ── */
 const PageLoader: FC = () => (
@@ -79,6 +83,7 @@ const App: FC = () => {
 
   return (
     <BrowserRouter>
+      <AuthProvider>
       <AnalyticsTracker />
       <SkipToMain />
       <StructuredData />
@@ -148,6 +153,8 @@ const App: FC = () => {
             <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
             <Route path="/cookie-policy" element={<CookiePolicyPage />} />
             <Route path="/terms-conditions" element={<TermsConditionsPage />} />
+            <Route path="/admin/login" element={<AdminLoginPage />} />
+            <Route path="/admin" element={<ProtectedRoute><AdminDashboardPage /></ProtectedRoute>} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </Suspense>
@@ -156,6 +163,7 @@ const App: FC = () => {
       <Footer />
       <CookieConsent />
       </ClickSpark>
+      </AuthProvider>
     </BrowserRouter>
   );
 };

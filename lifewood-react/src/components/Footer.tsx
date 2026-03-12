@@ -62,6 +62,9 @@ const Footer: FC = () => {
 
           <div className="copyright">
             <div>&copy; {new Date().getFullYear()} Lifewood Data Technology — All Rights Reserved</div>
+            <Link to="/admin/login" className="admin-footer-link" aria-label="Admin login">
+              <i className="fas fa-lock" />
+            </Link>
           </div>
         </div>
       </footer>
