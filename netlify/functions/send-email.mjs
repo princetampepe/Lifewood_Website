@@ -1,7 +1,7 @@
 /**
  * Netlify Function — /api/send-email
- * Sends application status notification emails via Resend.
- * Requires RESEND_API_KEY and optionally EMAIL_FROM set in Netlify environment variables.
+ * Sends application status notification emails via Gmail SMTP (Nodemailer).
+ * Requires GMAIL_USER and GMAIL_APP_PASSWORD set in Netlify environment variables.
  *
  * Expected POST body:
  *   { applicantName, applicantEmail, position, status, applicationDate? }
@@ -9,7 +9,7 @@
  * status: "accepted" | "rejected"
  */
 
-const RESEND_ENDPOINT = 'https://api.resend.com/emails';
+import nodemailer from 'nodemailer';
 
 /**
  * Build a clean, branded HTML email for application status notifications.
@@ -47,7 +47,7 @@ function buildEmailHTML({ applicantName, position, status, applicationDate }) {
           <li>Our HR team will reach out to you within <strong>3-5 business days</strong> with onboarding details.</li>
           <li>Please prepare a valid government-issued ID for verification purposes.</li>
           <li>You will receive a separate email with your employment contract and start date information.</li>
-          <li>If you have any questions in the meantime, please email us at <a href="mailto:hr@lifewood.com" style="color:#D4A017;text-decoration:none;font-weight:600;">hr@lifewood.com</a>.</li>
+          <li>If you have any questions in the meantime, please email us at <a href="mailto:hr@lifewoodwebsite.com" style="color:#D4A017;text-decoration:none;font-weight:600;">hr@lifewoodwebsite.com</a>.</li>
         </ol>
       </div>
 
@@ -81,7 +81,7 @@ function buildEmailHTML({ applicantName, position, status, applicationDate }) {
         </p>
         <p style="font-size:14px;line-height:1.7;color:#2a2a2a;margin:0;">
           We encourage you to keep an eye on our
-          <a href="https://lifewood.com/careers" style="color:#D4A017;text-decoration:none;font-weight:600;">Careers page</a>
+          <a href="https://lifewoodwebsite.com/careers" style="color:#D4A017;text-decoration:none;font-weight:600;">Careers page</a>
           for new opportunities. Your profile will be kept on file, and we may reach out if a
           suitable position becomes available.
         </p>
@@ -159,9 +159,9 @@ function buildEmailHTML({ applicantName, position, status, applicationDate }) {
         <p style="margin:0;font-size:12px;color:#999;line-height:1.6;">
           Empowering businesses with AI-powered data solutions across 30+ countries.
           <br />
-          <a href="mailto:hr@lifewood.com" style="color:#D4A017;text-decoration:none;">hr@lifewood.com</a>
+          <a href="mailto:hr@lifewoodwebsite.com" style="color:#D4A017;text-decoration:none;">hr@lifewoodwebsite.com</a>
           &nbsp;&middot;&nbsp;
-          <a href="https://lifewood.com" style="color:#D4A017;text-decoration:none;">lifewood.com</a>
+          <a href="https://lifewoodwebsite.com" style="color:#D4A017;text-decoration:none;">lifewoodwebsite.com</a>
         </p>
       </div>
     </div>
@@ -178,121 +178,82 @@ function buildEmailHTML({ applicantName, position, status, applicationDate }) {
   `.trim();
 }
 
-export default async (request) => {
+export const handler = async (event) => {
+  const headers = { 'Content-Type': 'application/json' };
+
   // Only allow POST
-  if (request.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
-      headers: { 'Content-Type': 'application/json' },
-    });
+  if (event.httpMethod !== 'POST') {
+    return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) };
   }
 
-  const apiKey = Deno?.env?.get?.('RESEND_API_KEY') ?? process.env.RESEND_API_KEY;
+  const gmailUser = process.env.GMAIL_USER;
+  const gmailPass = process.env.GMAIL_APP_PASSWORD;
 
-  if (!apiKey) {
-    console.error('[send-email] RESEND_API_KEY is not configured.');
-    return new Response(
-      JSON.stringify({ error: 'Email service not configured.' }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } },
-    );
+  if (!gmailUser || !gmailPass) {
+    console.error('[send-email] GMAIL_USER or GMAIL_APP_PASSWORD is not configured.');
+    return { statusCode: 500, headers, body: JSON.stringify({ error: 'Email service not configured.' }) };
   }
-
-  const emailFrom = Deno?.env?.get?.('EMAIL_FROM') ?? process.env.EMAIL_FROM ?? 'Lifewood <noreply@lifewood.com>';
 
   try {
-    const { applicantName, applicantEmail, position, status, applicationDate } = await request.json();
+    const { applicantName, applicantEmail, position, status, applicationDate } = JSON.parse(event.body || '{}');
 
     // Validate required fields
     if (!applicantName || typeof applicantName !== 'string') {
-      return new Response(
-        JSON.stringify({ error: 'applicantName is required.' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } },
-      );
+      return { statusCode: 400, headers, body: JSON.stringify({ error: 'applicantName is required.' }) };
     }
     if (!applicantEmail || typeof applicantEmail !== 'string') {
-      return new Response(
-        JSON.stringify({ error: 'applicantEmail is required.' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } },
-      );
+      return { statusCode: 400, headers, body: JSON.stringify({ error: 'applicantEmail is required.' }) };
     }
     if (!position || typeof position !== 'string') {
-      return new Response(
-        JSON.stringify({ error: 'position is required.' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } },
-      );
+      return { statusCode: 400, headers, body: JSON.stringify({ error: 'position is required.' }) };
     }
     if (status !== 'accepted' && status !== 'rejected') {
-      return new Response(
-        JSON.stringify({ error: 'status must be "accepted" or "rejected".' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } },
-      );
+      return { statusCode: 400, headers, body: JSON.stringify({ error: 'status must be "accepted" or "rejected".' }) };
     }
 
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(applicantEmail)) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid email address.' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } },
-      );
+      return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid email address.' }) };
     }
 
     const subject = status === 'accepted'
       ? `Congratulations! Your Application for ${position} Has Been Accepted — Lifewood`
       : `Application Update: ${position} — Lifewood`;
 
-    const html = buildEmailHTML({
-      applicantName,
-      position,
-      status,
-      applicationDate,
-    });
+    const html = buildEmailHTML({ applicantName, position, status, applicationDate });
 
-    // Send via Resend API
-    const resendRes = await fetch(RESEND_ENDPOINT, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
+    // Create Gmail SMTP transporter
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: gmailUser,
+        pass: gmailPass,
       },
-      body: JSON.stringify({
-        from: emailFrom,
-        to: [applicantEmail],
-        subject,
-        html,
-      }),
     });
 
-    const resendData = await resendRes.json();
+    const info = await transporter.sendMail({
+      from: `Lifewood <${gmailUser}>`,
+      to: applicantEmail,
+      subject,
+      html,
+    });
 
-    if (!resendRes.ok) {
-      console.error('[send-email] Resend API error:', resendData);
-      return new Response(
-        JSON.stringify({
-          error: 'Failed to send email.',
-          details: resendData.message || resendData.name || 'Unknown Resend error',
-        }),
-        { status: 502, headers: { 'Content-Type': 'application/json' } },
-      );
-    }
-
-    return new Response(
-      JSON.stringify({
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({
         success: true,
-        emailId: resendData.id,
+        emailId: info.messageId,
         message: `Email sent to ${applicantEmail}`,
       }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } },
-    );
+    };
   } catch (err) {
     console.error('[send-email] Internal error:', err);
-    return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } },
-    );
+    return {
+      statusCode: 502,
+      headers,
+      body: JSON.stringify({ error: 'Failed to send email.', details: err.message || 'Unknown error' }),
+    };
   }
-};
-
-export const config = {
-  path: '/api/send-email',
 };

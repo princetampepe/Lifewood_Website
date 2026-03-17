@@ -1,7 +1,7 @@
 /**
  * Vercel Serverless Function — /api/send-email
- * Sends application status notification emails via Resend.
- * Requires RESEND_API_KEY and optionally EMAIL_FROM set in Vercel env vars.
+ * Sends application status notification emails via Gmail SMTP (Nodemailer).
+ * Requires GMAIL_USER and GMAIL_APP_PASSWORD set in Vercel env vars.
  *
  * Expected POST body:
  *   { applicantName, applicantEmail, position, status, applicationDate? }
@@ -9,7 +9,7 @@
  * status: "accepted" | "rejected"
  */
 
-const RESEND_ENDPOINT = 'https://api.resend.com/emails';
+import nodemailer from 'nodemailer';
 
 /**
  * Build a clean, branded HTML email for application status notifications.
@@ -47,7 +47,7 @@ function buildEmailHTML({ applicantName, position, status, applicationDate }) {
           <li>Our HR team will reach out to you within <strong>3-5 business days</strong> with onboarding details.</li>
           <li>Please prepare a valid government-issued ID for verification purposes.</li>
           <li>You will receive a separate email with your employment contract and start date information.</li>
-          <li>If you have any questions in the meantime, please email us at <a href="mailto:hr@lifewood.com" style="color:#D4A017;text-decoration:none;font-weight:600;">hr@lifewood.com</a>.</li>
+          <li>If you have any questions in the meantime, please email us at <a href="mailto:hr@lifewoodwebsite.com" style="color:#D4A017;text-decoration:none;font-weight:600;">hr@lifewoodwebsite.com</a>.</li>
         </ol>
       </div>
 
@@ -81,7 +81,7 @@ function buildEmailHTML({ applicantName, position, status, applicationDate }) {
         </p>
         <p style="font-size:14px;line-height:1.7;color:#2a2a2a;margin:0;">
           We encourage you to keep an eye on our
-          <a href="https://lifewood.com/careers" style="color:#D4A017;text-decoration:none;font-weight:600;">Careers page</a>
+          <a href="https://lifewoodwebsite.com/careers" style="color:#D4A017;text-decoration:none;font-weight:600;">Careers page</a>
           for new opportunities. Your profile will be kept on file, and we may reach out if a
           suitable position becomes available.
         </p>
@@ -159,9 +159,9 @@ function buildEmailHTML({ applicantName, position, status, applicationDate }) {
         <p style="margin:0;font-size:12px;color:#999;line-height:1.6;">
           Empowering businesses with AI-powered data solutions across 30+ countries.
           <br />
-          <a href="mailto:hr@lifewood.com" style="color:#D4A017;text-decoration:none;">hr@lifewood.com</a>
+          <a href="mailto:hr@lifewoodwebsite.com" style="color:#D4A017;text-decoration:none;">hr@lifewoodwebsite.com</a>
           &nbsp;&middot;&nbsp;
-          <a href="https://lifewood.com" style="color:#D4A017;text-decoration:none;">lifewood.com</a>
+          <a href="https://lifewoodwebsite.com" style="color:#D4A017;text-decoration:none;">lifewoodwebsite.com</a>
         </p>
       </div>
     </div>
@@ -184,13 +184,13 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
-    console.error('[send-email] RESEND_API_KEY is not configured.');
+  const gmailUser = process.env.GMAIL_USER;
+  const gmailPass = process.env.GMAIL_APP_PASSWORD;
+
+  if (!gmailUser || !gmailPass) {
+    console.error('[send-email] GMAIL_USER or GMAIL_APP_PASSWORD is not configured.');
     return res.status(500).json({ error: 'Email service not configured.' });
   }
-
-  const emailFrom = process.env.EMAIL_FROM || 'Lifewood <noreply@lifewood.com>';
 
   try {
     const { applicantName, applicantEmail, position, status, applicationDate } = req.body;
@@ -226,38 +226,32 @@ export default async function handler(req, res) {
       applicationDate,
     });
 
-    // Send via Resend API
-    const resendRes = await fetch(RESEND_ENDPOINT, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
+    // Create Gmail SMTP transporter
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: gmailUser,
+        pass: gmailPass,
       },
-      body: JSON.stringify({
-        from: emailFrom,
-        to: [applicantEmail],
-        subject,
-        html,
-      }),
     });
 
-    const resendData = await resendRes.json();
-
-    if (!resendRes.ok) {
-      console.error('[send-email] Resend API error:', resendData);
-      return res.status(502).json({
-        error: 'Failed to send email.',
-        details: resendData.message || resendData.name || 'Unknown Resend error',
-      });
-    }
+    const info = await transporter.sendMail({
+      from: `Lifewood <${gmailUser}>`,
+      to: applicantEmail,
+      subject,
+      html,
+    });
 
     return res.status(200).json({
       success: true,
-      emailId: resendData.id,
+      emailId: info.messageId,
       message: `Email sent to ${applicantEmail}`,
     });
   } catch (err) {
     console.error('[send-email] Internal error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(502).json({
+      error: 'Failed to send email.',
+      details: err.message || 'Unknown error',
+    });
   }
 }
