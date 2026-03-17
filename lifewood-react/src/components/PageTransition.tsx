@@ -1,24 +1,36 @@
 /**
- * PageTransition — a smooth route-change overlay.
- * Briefly flashes a tinted overlay when content swaps.
+ * PageTransition — smooth route-change overlay with wipe animation.
+ * Uses a two-phase approach: wipe in → content loads → wipe out.
  */
-import { useEffect, useState, type FC } from 'react';
+import { useEffect, useRef, useState, type FC } from 'react';
 import { useLocation } from 'react-router-dom';
+
+type Phase = 'idle' | 'enter' | 'exit';
 
 const PageTransition: FC = () => {
   const location = useLocation();
-  const [active, setActive] = useState(false);
+  const [phase, setPhase] = useState<Phase>('idle');
+  const prevPath = useRef(location.pathname);
 
   useEffect(() => {
-    setActive(true);
-    const t = setTimeout(() => setActive(false), 350);
-    return () => clearTimeout(t);
+    if (location.pathname === prevPath.current) return;
+    prevPath.current = location.pathname;
+
+    setPhase('enter');
+    const enterTimer = setTimeout(() => {
+      setPhase('exit');
+      const exitTimer = setTimeout(() => setPhase('idle'), 500);
+      return () => clearTimeout(exitTimer);
+    }, 300);
+
+    return () => clearTimeout(enterTimer);
   }, [location.pathname]);
+
+  if (phase === 'idle') return null;
 
   return (
     <div
-      className="page-transition-overlay"
-      style={{ opacity: active ? 0.12 : 0 }}
+      className={`page-transition-overlay pt-${phase}`}
       aria-hidden="true"
     />
   );

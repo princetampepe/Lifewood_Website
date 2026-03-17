@@ -14,6 +14,23 @@ import { useReducedMotion } from './useReducedMotion';
 /* ── Helpers ── */
 const isMobile = () => typeof window !== 'undefined' && window.innerWidth < 900;
 
+/** Throttle function for high-frequency events (mousemove, scroll) */
+function throttle<T extends (...args: never[]) => void>(fn: T, ms: number): T {
+  let last = 0;
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  return ((...args: Parameters<T>) => {
+    const now = Date.now();
+    const remaining = ms - (now - last);
+    if (remaining <= 0) {
+      if (timer) { clearTimeout(timer); timer = null; }
+      last = now;
+      fn(...args);
+    } else if (!timer) {
+      timer = setTimeout(() => { last = Date.now(); timer = null; fn(...args); }, remaining);
+    }
+  }) as T;
+}
+
 /* ── CSS injected once ── */
 let cssInjected = false;
 
@@ -145,15 +162,12 @@ export function useLegacyEffects(skip = false) {
     document.addEventListener('click', rippleHandler);
     addCleanup(() => document.removeEventListener('click', rippleHandler));
 
-    /* --- 4. Mouse Trail --- */
+    /* --- 4. Mouse Trail (throttled to reduce DOM churn) --- */
     if (!mobile) {
       let trailCount = 0;
-      const maxTrail = 8;
-      let lastTrailTime = 0;
-      const trailMove = (e: MouseEvent) => {
-        const now = Date.now();
-        if (now - lastTrailTime < 60 || trailCount >= maxTrail) return;
-        lastTrailTime = now;
+      const maxTrail = 6;
+      const trailMove = throttle((e: MouseEvent) => {
+        if (trailCount >= maxTrail) return;
         trailCount++;
         const dot = document.createElement('div');
         dot.className = 'lw-trail-dot';
@@ -164,8 +178,8 @@ export function useLegacyEffects(skip = false) {
           dot.style.opacity = '0';
           dot.style.transform = 'translateY(-20px) scale(0)';
         });
-        setTimeout(() => { dot.remove(); trailCount--; }, 650);
-      };
+        setTimeout(() => { dot.remove(); trailCount--; }, 550);
+      }, 50);
       document.addEventListener('mousemove', trailMove, { passive: true });
       addCleanup(() => document.removeEventListener('mousemove', trailMove));
     }
@@ -275,13 +289,14 @@ export function useLegacyEffects(skip = false) {
       });
     }
 
-    /* --- 8. Dynamic Card Shadows --- */
+    /* --- 8. Dynamic Card Shadows (throttled to 32ms ≈ 30fps) --- */
     if (!mobile) {
       const shadowCards = document.querySelectorAll<HTMLElement>('.service-card, .service-detailed-card, .proj-card, .stat-card');
-      const shadowMove = (e: MouseEvent) => {
+      const shadowMove = throttle((e: MouseEvent) => {
+        const vh = window.innerHeight;
         shadowCards.forEach((card) => {
           const r = card.getBoundingClientRect();
-          if (r.top > window.innerHeight + 100 || r.bottom < -100) return;
+          if (r.top > vh + 100 || r.bottom < -100) return;
           const cx = r.left + r.width / 2;
           const cy = r.top + r.height / 2;
           const dx = (e.clientX - cx) / r.width;
@@ -292,7 +307,7 @@ export function useLegacyEffects(skip = false) {
             card.style.boxShadow = `${-dx * 12 * intensity}px ${-dy * 12 * intensity}px ${20 + intensity * 15}px rgba(26,58,42,${(0.06 + intensity * 0.06).toFixed(3)})`;
           }
         });
-      };
+      }, 32);
       document.addEventListener('mousemove', shadowMove, { passive: true });
       addCleanup(() => document.removeEventListener('mousemove', shadowMove));
     }
@@ -358,32 +373,28 @@ export function useLegacyEffects(skip = false) {
       }
     }
 
-    /* --- 12. Scroll-Velocity Skew --- */
+    /* --- 12. Scroll-Velocity Skew (throttled, pauses when hidden) --- */
     if (!mobile) {
       const velCards = document.querySelectorAll<HTMLElement>('.service-card, .service-detailed-card, .proj-card, .stat-card');
       if (velCards.length) {
         let lastScroll = window.scrollY;
         let velocity = 0;
-        let velRaf = 0;
-        let velPaused = false;
-        const velUpdate = () => {
-          if (velPaused) { velRaf = requestAnimationFrame(velUpdate); return; }
+        const velScroll = throttle(() => {
+          if (document.hidden) return;
           const diff = Math.abs(window.scrollY - lastScroll);
           velocity += (diff - velocity) * 0.15;
           lastScroll = window.scrollY;
           const skew = Math.min(velocity * 0.04, 2);
+          const vh = window.innerHeight;
           velCards.forEach((card) => {
             const r = card.getBoundingClientRect();
-            if (r.top < window.innerHeight && r.bottom > 0) {
+            if (r.top < vh && r.bottom > 0) {
               card.style.transform = `skewY(${(-skew * 0.3).toFixed(2)}deg)`;
             }
           });
-          velRaf = requestAnimationFrame(velUpdate);
-        };
-        velRaf = requestAnimationFrame(velUpdate);
-        const onVelVis = () => { velPaused = document.hidden; };
-        document.addEventListener('visibilitychange', onVelVis);
-        addCleanup(() => { cancelAnimationFrame(velRaf); document.removeEventListener('visibilitychange', onVelVis); });
+        }, 16);
+        window.addEventListener('scroll', velScroll, { passive: true });
+        addCleanup(() => window.removeEventListener('scroll', velScroll));
       }
     }
 

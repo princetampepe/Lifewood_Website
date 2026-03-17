@@ -11,8 +11,8 @@ interface LazyImageProps extends ImgHTMLAttributes<HTMLImageElement> {
 /**
  * LazyImage — Intersection-Observer-based lazy loader with:
  * - WebP with PNG/JPG fallback via <picture>
- * - Blur-up placeholder effect
- * - Native lazy loading polyfill
+ * - Animated shimmer skeleton placeholder
+ * - Smooth fade-in on load
  */
 const LazyImage: FC<LazyImageProps> = ({
   src,
@@ -59,6 +59,21 @@ const LazyImage: FC<LazyImageProps> = ({
       className={`lazy-image-wrapper ${loaded ? 'lazy-loaded' : 'lazy-loading'} ${className}`}
       style={{ position: 'relative', overflow: 'hidden' }}
     >
+      {/* Shimmer skeleton placeholder */}
+      {!loaded && (
+        <div
+          aria-hidden="true"
+          className="lazy-shimmer"
+          style={{
+            position: 'absolute', inset: 0,
+            background: 'linear-gradient(110deg, rgba(26,58,42,0.06) 30%, rgba(212,160,23,0.08) 50%, rgba(26,58,42,0.06) 70%)',
+            backgroundSize: '200% 100%',
+            animation: 'shimmerSlide 1.5s ease-in-out infinite',
+            borderRadius: 'inherit',
+          }}
+        />
+      )}
+
       {/* Low-res blur placeholder */}
       {lowResSrc && !loaded && (
         <img
@@ -86,7 +101,8 @@ const LazyImage: FC<LazyImageProps> = ({
               height: '100%',
               objectFit: 'cover',
               opacity: loaded ? 1 : 0,
-              transition: 'opacity 0.4s ease',
+              transform: loaded ? 'scale(1)' : 'scale(1.02)',
+              transition: 'opacity 0.5s cubic-bezier(.16,1,.3,1), transform 0.5s cubic-bezier(.16,1,.3,1)',
             }}
             {...rest}
           />

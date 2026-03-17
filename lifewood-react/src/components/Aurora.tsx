@@ -182,9 +182,17 @@ const Aurora: FC<AuroraProps> = ({
         init();
       });
 
+      /* Pause rendering when off-screen or tab hidden for GPU savings */
+      let isVisible = true;
+      const visObs = new IntersectionObserver(([e]) => { isVisible = e.isIntersecting; }, { threshold: 0 });
+      visObs.observe(ctn!);
+      const onVisChange = () => { if (document.hidden) isVisible = false; };
+      document.addEventListener('visibilitychange', onVisChange);
+
       const update = (t: number) => {
         if (contextLost) return;
         animateId = requestAnimationFrame(update);
+        if (!isVisible) return; // skip GPU work when not visible
         const { speed: spd = 1.0 } = propsRef.current;
         program.uniforms.uTime.value = t * 0.01 * spd * 0.1;
         program.uniforms.uAmplitude.value = propsRef.current.amplitude ?? 1.0;
