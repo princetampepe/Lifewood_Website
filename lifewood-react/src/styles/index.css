@@ -2845,6 +2845,57 @@ textarea:focus-visible,
 .admin-action-btn.edit:hover { border-color: var(--saffron); background: rgba(212,160,23,0.08); }
 .admin-action-btn.delete { color: #e74c3c; }
 .admin-action-btn.delete:hover { border-color: #e74c3c; background: rgba(231,76,60,0.08); }
+/* Accept / Reject action buttons */
+.admin-action-btn.accept { color: #27ae60; }
+.admin-action-btn.accept:hover { border-color: #27ae60; background: rgba(39,174,96,0.08); }
+.admin-action-btn.reject { color: #e74c3c; }
+.admin-action-btn.reject:hover { border-color: #e74c3c; background: rgba(231,76,60,0.08); }
+.admin-action-btn:disabled {
+  opacity: 0.5; cursor: not-allowed; pointer-events: none;
+}
+
+/* ── Application Status Badges ── */
+.app-status-badge {
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  padding: 0.2rem 0.65rem; border-radius: 50px;
+  font-size: 0.7rem; font-weight: 700; letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+.app-status-badge.status-pending {
+  background: rgba(212,160,23,0.12); color: #b8860b; border: 1px solid rgba(212,160,23,0.25);
+}
+.app-status-badge.status-accepted {
+  background: rgba(39,174,96,0.1); color: #1e8449; border: 1px solid rgba(39,174,96,0.25);
+}
+.app-status-badge.status-rejected {
+  background: rgba(231,76,60,0.08); color: #c0392b; border: 1px solid rgba(231,76,60,0.2);
+}
+.app-status-badge i { font-size: 0.65rem; }
+
+/* ── Application card left border indicator ── */
+.admin-record-card.app-status-pending { border-left: 3px solid #D4A017; }
+.admin-record-card.app-status-accepted { border-left: 3px solid #27ae60; }
+.admin-record-card.app-status-rejected { border-left: 3px solid #e74c3c; }
+
+/* ── Status Filter Pills ── */
+.admin-status-filters {
+  display: flex; gap: 0.5rem; flex-wrap: wrap;
+  margin-bottom: 1.2rem; padding: 0 0.25rem;
+}
+.admin-status-pill {
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  background: rgba(26,58,42,0.04); border: 1.5px solid rgba(26,58,42,0.1);
+  border-radius: 50px; padding: 0.4rem 1rem;
+  font-family: inherit; font-weight: 600; font-size: 0.78rem;
+  color: var(--castletone); cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+.admin-status-pill:hover { border-color: var(--dark-serpent-10); color: var(--dark-serpent); }
+.admin-status-pill.active { background: var(--dark-serpent); color: #fff; border-color: var(--dark-serpent); }
+.admin-status-pill.pending.active { background: #b8860b; border-color: #b8860b; }
+.admin-status-pill.accepted.active { background: #27ae60; border-color: #27ae60; }
+.admin-status-pill.rejected.active { background: #e74c3c; border-color: #e74c3c; }
+.admin-status-pill i { font-size: 0.72rem; }
 
 /* ── Modal ── */
 .admin-modal-overlay {

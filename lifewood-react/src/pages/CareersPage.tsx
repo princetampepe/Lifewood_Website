@@ -48,6 +48,9 @@ const CareersPage: FC = () => {
         phone,
         position,
         coverLetter,
+        status: 'pending',
+        statusUpdatedAt: null,
+        emailSentAt: null,
         createdAt: serverTimestamp(),
       });
 

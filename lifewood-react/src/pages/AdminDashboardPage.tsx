@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, type FC, type FormEvent } from 'react';
+import { useState, useEffect, useMemo, useCallback, type FC, type FormEvent } from 'react';
 import {
   collection,
   onSnapshot,
@@ -27,6 +27,8 @@ interface ContactMessage {
   createdAt: Timestamp | null;
 }
 
+type ApplicationStatus = 'pending' | 'accepted' | 'rejected';
+
 interface JobApplication {
   id: string;
   fullName: string;
@@ -34,6 +36,9 @@ interface JobApplication {
   phone: string;
   position: string;
   coverLetter: string;
+  status: ApplicationStatus;
+  statusUpdatedAt: Timestamp | null;
+  emailSentAt: Timestamp | null;
   createdAt: Timestamp | null;
 }
 
@@ -41,6 +46,12 @@ interface JobApplication {
 const sanitize = (s: string) => s.replace(/<[^>]*>/g, '').trim();
 const fmtDate = (ts: Timestamp | null) =>
   ts ? ts.toDate().toLocaleString() : '—';
+
+/** Resolve a position slug (e.g. "data-annotator-iphone") to its human title. */
+const getPositionTitle = (slug: string): string => {
+  const pos = positions.find((p) => p.value === slug);
+  return pos?.title ?? slug;
+};
 
 /* ================================================================
    ADMIN DASHBOARD
@@ -62,6 +73,7 @@ const AdminDashboardPage: FC = () => {
   const [appsLoading, setAppsLoading] = useState(true);
   const [appsError, setAppsError] = useState('');
   const [appSearch, setAppSearch] = useState('');
+  const [appStatusFilter, setAppStatusFilter] = useState<ApplicationStatus | 'all'>('all');
 
   /* ── Modal state ── */
   const [modal, setModal] = useState<
@@ -71,6 +83,9 @@ const AdminDashboardPage: FC = () => {
     | { type: 'edit-app'; data: JobApplication }
     | null
   >(null);
+
+  /* ── In-flight status update tracking ── */
+  const [updatingApps, setUpdatingApps] = useState<Set<string>>(new Set());
 
   /* ── Real-time listeners ── */
   useEffect(() => {
@@ -97,7 +112,21 @@ const AdminDashboardPage: FC = () => {
       q,
       (snap) => {
         setApplications(
-          snap.docs.map((d) => ({ id: d.id, ...d.data() } as JobApplication)),
+          snap.docs.map((d) => {
+            const data = d.data();
+            return {
+              id: d.id,
+              fullName: data.fullName ?? '',
+              email: data.email ?? '',
+              phone: data.phone ?? '',
+              position: data.position ?? '',
+              coverLetter: data.coverLetter ?? '',
+              status: data.status ?? 'pending',
+              statusUpdatedAt: data.statusUpdatedAt ?? null,
+              emailSentAt: data.emailSentAt ?? null,
+              createdAt: data.createdAt ?? null,
+            } as JobApplication;
+          }),
         );
         setAppsLoading(false);
       },
@@ -123,16 +152,36 @@ const AdminDashboardPage: FC = () => {
   }, [contacts, contactSearch]);
 
   const filteredApps = useMemo(() => {
-    if (!appSearch.trim()) return applications;
-    const q = appSearch.toLowerCase();
-    return applications.filter(
-      (a) =>
-        a.fullName.toLowerCase().includes(q) ||
-        a.email.toLowerCase().includes(q) ||
-        a.position.toLowerCase().includes(q) ||
-        a.phone.toLowerCase().includes(q),
-    );
-  }, [applications, appSearch]);
+    let filtered = applications;
+
+    // Status filter
+    if (appStatusFilter !== 'all') {
+      filtered = filtered.filter((a) => a.status === appStatusFilter);
+    }
+
+    // Text search
+    if (appSearch.trim()) {
+      const q = appSearch.toLowerCase();
+      filtered = filtered.filter(
+        (a) =>
+          a.fullName.toLowerCase().includes(q) ||
+          a.email.toLowerCase().includes(q) ||
+          a.position.toLowerCase().includes(q) ||
+          a.phone.toLowerCase().includes(q),
+      );
+    }
+
+    return filtered;
+  }, [applications, appSearch, appStatusFilter]);
+
+  /* ── Status counts ── */
+  const statusCounts = useMemo(() => {
+    const counts = { pending: 0, accepted: 0, rejected: 0 };
+    applications.forEach((a) => {
+      if (a.status in counts) counts[a.status]++;
+    });
+    return counts;
+  }, [applications]);
 
   /* ── Delete handlers ── */
   const deleteContact = async (id: string) => {
@@ -154,6 +203,79 @@ const AdminDashboardPage: FC = () => {
       toast.error('Failed to delete');
     }
   };
+
+  /* ── Accept / Reject handler ── */
+  const updateApplicationStatus = useCallback(async (
+    app: JobApplication,
+    newStatus: 'accepted' | 'rejected',
+  ) => {
+    const actionWord = newStatus === 'accepted' ? 'accept' : 'reject';
+    const confirmMsg = `Are you sure you want to ${actionWord} ${app.fullName}'s application for ${getPositionTitle(app.position)}?\n\nAn email notification will be sent to ${app.email}.`;
+
+    if (!confirm(confirmMsg)) return;
+
+    // Mark as in-flight
+    setUpdatingApps((prev) => new Set(prev).add(app.id));
+
+    const loadingToast = toast.loading(
+      `${newStatus === 'accepted' ? 'Accepting' : 'Rejecting'} application and sending email…`,
+    );
+
+    try {
+      // 1. Update Firestore document status
+      await updateDoc(doc(firestore, 'jobApplications', app.id), {
+        status: newStatus,
+        statusUpdatedAt: serverTimestamp(),
+      });
+
+      // 2. Send email notification via API
+      const emailRes = await fetch('/api/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          applicantName: app.fullName,
+          applicantEmail: app.email,
+          position: getPositionTitle(app.position),
+          status: newStatus,
+          applicationDate: app.createdAt?.toDate().toISOString() ?? null,
+        }),
+      });
+
+      const emailData = await emailRes.json();
+
+      if (!emailRes.ok) {
+        // Status was updated but email failed — record this
+        console.error('[Admin] Email send failed:', emailData);
+        toast.dismiss(loadingToast);
+        toast.error(
+          `Application ${newStatus} but email failed to send: ${emailData.details || emailData.error || 'Unknown error'}. You may need to contact the applicant manually.`,
+          { duration: 8000 },
+        );
+        return;
+      }
+
+      // 3. Record successful email delivery
+      await updateDoc(doc(firestore, 'jobApplications', app.id), {
+        emailSentAt: serverTimestamp(),
+      });
+
+      toast.dismiss(loadingToast);
+      toast.success(
+        `Application ${newStatus}! Email sent to ${app.email}.`,
+        { duration: 5000 },
+      );
+    } catch (err) {
+      console.error('[Admin] Status update error:', err);
+      toast.dismiss(loadingToast);
+      toast.error('Failed to update application status. Please try again.');
+    } finally {
+      setUpdatingApps((prev) => {
+        const next = new Set(prev);
+        next.delete(app.id);
+        return next;
+      });
+    }
+  }, []);
 
   /* ── Render ── */
   return (
@@ -264,6 +386,34 @@ const AdminDashboardPage: FC = () => {
             </button>
           </div>
 
+          {/* ── Status Filter Pills ── */}
+          <div className="admin-status-filters">
+            <button
+              className={`admin-status-pill ${appStatusFilter === 'all' ? 'active' : ''}`}
+              onClick={() => setAppStatusFilter('all')}
+            >
+              All ({applications.length})
+            </button>
+            <button
+              className={`admin-status-pill pending ${appStatusFilter === 'pending' ? 'active' : ''}`}
+              onClick={() => setAppStatusFilter('pending')}
+            >
+              <i className="fas fa-clock" /> Pending ({statusCounts.pending})
+            </button>
+            <button
+              className={`admin-status-pill accepted ${appStatusFilter === 'accepted' ? 'active' : ''}`}
+              onClick={() => setAppStatusFilter('accepted')}
+            >
+              <i className="fas fa-check-circle" /> Accepted ({statusCounts.accepted})
+            </button>
+            <button
+              className={`admin-status-pill rejected ${appStatusFilter === 'rejected' ? 'active' : ''}`}
+              onClick={() => setAppStatusFilter('rejected')}
+            >
+              <i className="fas fa-times-circle" /> Rejected ({statusCounts.rejected})
+            </button>
+          </div>
+
           {appsLoading && (
             <div className="admin-loading"><div className="page-loader-spinner" /> Loading…</div>
           )}
@@ -273,26 +423,66 @@ const AdminDashboardPage: FC = () => {
           )}
 
           <div className="admin-cards">
-            {filteredApps.map((a) => (
-              <div key={a.id} className="admin-record-card">
-                <div className="admin-record-header">
-                  <h3>{a.fullName}</h3>
-                  <span className="admin-record-date">{fmtDate(a.createdAt)}</span>
+            {filteredApps.map((a) => {
+              const isUpdating = updatingApps.has(a.id);
+              return (
+                <div key={a.id} className={`admin-record-card app-status-${a.status}`}>
+                  <div className="admin-record-header">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      <h3>{a.fullName}</h3>
+                      <span className={`app-status-badge status-${a.status}`}>
+                        {a.status === 'pending' && <><i className="fas fa-clock" /> Pending</>}
+                        {a.status === 'accepted' && <><i className="fas fa-check-circle" /> Accepted</>}
+                        {a.status === 'rejected' && <><i className="fas fa-times-circle" /> Rejected</>}
+                      </span>
+                    </div>
+                    <span className="admin-record-date">{fmtDate(a.createdAt)}</span>
+                  </div>
+                  <p className="admin-record-meta"><i className="fas fa-envelope" /> {a.email}</p>
+                  {a.phone && <p className="admin-record-meta"><i className="fas fa-phone" /> {a.phone}</p>}
+                  <p className="admin-record-meta"><i className="fas fa-briefcase" /> {getPositionTitle(a.position)}</p>
+                  {a.coverLetter && <p className="admin-record-body">{a.coverLetter}</p>}
+
+                  {/* Email delivery status */}
+                  {a.status !== 'pending' && (
+                    <p className="admin-record-meta" style={{ fontSize: '0.72rem', marginTop: '0.3rem' }}>
+                      <i className="fas fa-paper-plane" />
+                      {a.emailSentAt
+                        ? `Email sent ${fmtDate(a.emailSentAt)}`
+                        : 'Email not delivered — contact applicant manually'}
+                    </p>
+                  )}
+
+                  <div className="admin-record-actions">
+                    {/* Accept/Reject only shown for pending applications */}
+                    {a.status === 'pending' && (
+                      <>
+                        <button
+                          className="admin-action-btn accept"
+                          disabled={isUpdating}
+                          onClick={() => updateApplicationStatus(a, 'accepted')}
+                        >
+                          <i className="fas fa-check" /> {isUpdating ? 'Processing…' : 'Accept'}
+                        </button>
+                        <button
+                          className="admin-action-btn reject"
+                          disabled={isUpdating}
+                          onClick={() => updateApplicationStatus(a, 'rejected')}
+                        >
+                          <i className="fas fa-times" /> {isUpdating ? 'Processing…' : 'Reject'}
+                        </button>
+                      </>
+                    )}
+                    <button className="admin-action-btn edit" onClick={() => setModal({ type: 'edit-app', data: a })}>
+                      <i className="fas fa-pen" /> Edit
+                    </button>
+                    <button className="admin-action-btn delete" onClick={() => deleteApplication(a.id)}>
+                      <i className="fas fa-trash" /> Delete
+                    </button>
+                  </div>
                 </div>
-                <p className="admin-record-meta"><i className="fas fa-envelope" /> {a.email}</p>
-                {a.phone && <p className="admin-record-meta"><i className="fas fa-phone" /> {a.phone}</p>}
-                <p className="admin-record-meta"><i className="fas fa-briefcase" /> {a.position}</p>
-                {a.coverLetter && <p className="admin-record-body">{a.coverLetter}</p>}
-                <div className="admin-record-actions">
-                  <button className="admin-action-btn edit" onClick={() => setModal({ type: 'edit-app', data: a })}>
-                    <i className="fas fa-pen" /> Edit
-                  </button>
-                  <button className="admin-action-btn delete" onClick={() => deleteApplication(a.id)}>
-                    <i className="fas fa-trash" /> Delete
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -439,7 +629,13 @@ const ApplicationForm: FC<ApplicationFormProps> = ({ initial, onDone }) => {
         await updateDoc(doc(firestore, 'jobApplications', initial.id), data);
         toast.success('Application updated');
       } else {
-        await addDoc(collection(firestore, 'jobApplications'), { ...data, createdAt: serverTimestamp() });
+        await addDoc(collection(firestore, 'jobApplications'), {
+          ...data,
+          status: 'pending',
+          statusUpdatedAt: null,
+          emailSentAt: null,
+          createdAt: serverTimestamp(),
+        });
         toast.success('Application created');
       }
       onDone();
