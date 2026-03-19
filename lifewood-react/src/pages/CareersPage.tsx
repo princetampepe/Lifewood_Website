@@ -207,7 +207,7 @@ const CareersPage: FC = () => {
               </div>
               <div className="form-group">
                 <label htmlFor="resume">Resume / CV (email to <a href="mailto:hr@lifewood.com">hr@lifewood.com</a>)</label>
-                <input type="file" id="resume" name="resume" accept=".pdf,.doc,.docx" />
+                <input type="file" id="resume" name="resume" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.txt" />
               </div>
               <div className="form-group">
                 <label htmlFor="coverLetter">Cover Letter</label>

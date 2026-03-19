@@ -1535,8 +1535,8 @@ a { text-decoration: none; color: inherit; }
 }
 .form-btn:hover { background: var(--earth-yellow); transform: translateY(-2px); }
 .form-status { margin-top: 1rem; padding: 0.8rem 1rem; border-radius: 10px; font-size: 0.9rem; font-weight: 600; }
-.form-status.success { background: rgba(76,175,80,0.12); color: #2e7d32; }
-.form-status.error { background: rgba(244,67,54,0.12); color: #c62828; }
+.form-status.success { background: rgba(76,175,80,0.2); color: #4caf50; }
+.form-status.error { background: rgba(244,67,54,0.2); color: #ff6b6b; }
 
 /* ================================================================
    CAREERS FORM CARD
