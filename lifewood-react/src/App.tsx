@@ -84,7 +84,7 @@ const AppInner: FC = () => {
   const isTouchDevice = useIsTouchDevice();
   const isLightPage = useIsLightPage();
   const { pathname } = useLocation();
-  const isAdminSection = pathname.startsWith('/admin');
+  const isAdminSection = pathname.startsWith('/admin') && pathname !== '/admin/login';
 
   /* ── Smooth scroll (Lenis) — skip on light pages ── */
   useLenis(isLightPage ? null : { lerp: 0.1, duration: 1.2 });
