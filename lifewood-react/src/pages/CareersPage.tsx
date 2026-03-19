@@ -1,6 +1,7 @@
 import { useState, useMemo, type FC, type FormEvent } from 'react';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { firestore } from '../firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { firestore, storage } from '../firebase';
 import AnimReveal from '../components/AnimReveal';
 import BlurText from '../components/BlurText';
 import Typewriter from '../components/Typewriter';
@@ -41,6 +42,20 @@ const CareersPage: FC = () => {
       const phone = (form.elements.namedItem('phone') as HTMLInputElement).value.trim();
       const position = (form.elements.namedItem('position') as HTMLSelectElement).value;
       const coverLetter = (form.elements.namedItem('coverLetter') as HTMLTextAreaElement).value.trim();
+      const resumeInput = form.elements.namedItem('resume') as HTMLInputElement;
+      
+      let resumeUrl = '';
+      
+      // Upload resume file if provided
+      if (resumeInput?.files?.[0]) {
+        const file = resumeInput.files[0];
+        const timestamp = Date.now();
+        const fileName = `${timestamp}_${email}_${file.name}`;
+        const storageRef = ref(storage, `jobApplications/${fileName}`);
+        
+        await uploadBytes(storageRef, file);
+        resumeUrl = await getDownloadURL(storageRef);
+      }
 
       await addDoc(collection(firestore, 'jobApplications'), {
         fullName,
@@ -48,6 +63,7 @@ const CareersPage: FC = () => {
         phone,
         position,
         coverLetter,
+        resumeUrl: resumeUrl || null,
         status: 'pending',
         statusUpdatedAt: null,
         emailSentAt: null,

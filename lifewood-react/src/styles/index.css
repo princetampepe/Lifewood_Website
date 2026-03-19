@@ -3110,6 +3110,15 @@ textarea:focus-visible,
   background: #f8f9f8; border-radius: 10px; padding: 1rem;
   white-space: pre-wrap; word-break: break-word;
 }
+.admin-file-link {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  padding: 0.6rem 1rem; background: var(--saffron); color: #fff;
+  border-radius: 8px; font-size: 0.85rem; font-weight: 600;
+  text-decoration: none; transition: background 0.2s, transform 0.2s;
+}
+.admin-file-link:hover {
+  background: var(--earth-yellow); transform: translateY(-2px);
+}
 
 /* ── Admin responsive ── */
 @media (max-width: 768px) {

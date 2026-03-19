@@ -20,7 +20,7 @@ type ApplicationStatus = 'pending' | 'accepted' | 'rejected';
 
 interface JobApplication {
   id: string; fullName: string; email: string; phone: string;
-  position: string; coverLetter: string; status: ApplicationStatus;
+  position: string; coverLetter: string; resumeUrl?: string; status: ApplicationStatus;
   statusUpdatedAt: Timestamp | null; emailSentAt: Timestamp | null; createdAt: Timestamp | null;
 }
 
@@ -616,6 +616,14 @@ const AppDetailView: FC<{ data: JobApplication; onEdit: () => void }> = ({ data,
       <div className="admin-detail-field" style={{ marginTop: '0.5rem' }}>
         <label><i className="fas fa-file-alt" /> Cover Letter</label>
         <p className="admin-detail-message">{data.coverLetter}</p>
+      </div>
+    )}
+    {data.resumeUrl && (
+      <div className="admin-detail-field" style={{ marginTop: '0.5rem' }}>
+        <label><i className="fas fa-file" /> Resume / CV</label>
+        <a href={data.resumeUrl} target="_blank" rel="noopener noreferrer" className="admin-file-link">
+          <i className="fas fa-download" /> Download Resume
+        </a>
       </div>
     )}
     <button className="admin-create-btn" style={{ marginTop: '1.2rem' }} onClick={onEdit}>
