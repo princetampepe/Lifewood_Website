@@ -13,6 +13,8 @@ const CareersPage: FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPosition, setSelectedPosition] = useState('');
   const [formStatus, setFormStatus] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
+  const [selectedFileName, setSelectedFileName] = useState('');
+  const [selectedFileSize, setSelectedFileSize] = useState(0);
 
   const filteredPositions = useMemo(() => {
     if (!searchTerm.trim()) return positions;
@@ -49,6 +51,16 @@ const CareersPage: FC = () => {
       // Upload resume file if provided
       if (resumeInput?.files?.[0]) {
         const file = resumeInput.files[0];
+        
+        // Validate file size (max 10MB)
+        const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+        if (file.size > MAX_FILE_SIZE) {
+          setFormStatus({ type: 'error', msg: 'File size exceeds 10MB limit. Please upload a smaller file.' });
+          setIsSubmitting(false);
+          setTimeout(() => setFormStatus(null), 6000);
+          return;
+        }
+        
         const timestamp = Date.now();
         const fileName = `${timestamp}_${email}_${file.name}`;
         const storageRef = ref(storage, `jobApplications/${fileName}`);
@@ -73,11 +85,13 @@ const CareersPage: FC = () => {
       setFormStatus({ type: 'success', msg: 'Application submitted successfully! We will review and get back to you.' });
       form.reset();
       setSelectedPosition('');
+      setSelectedFileName('');
+      setSelectedFileSize(0);
     } catch {
       setFormStatus({ type: 'error', msg: 'Something went wrong. Please try again later.' });
     } finally {
       setIsSubmitting(false);
-      setTimeout(() => setFormStatus(null), 5000);
+      setTimeout(() => setFormStatus(null), 6000);
     }
   };
 
@@ -223,7 +237,30 @@ const CareersPage: FC = () => {
               </div>
               <div className="form-group">
                 <label htmlFor="resume">Resume / CV (email to <a href="mailto:hr@lifewood.com">hr@lifewood.com</a>)</label>
-                <input type="file" id="resume" name="resume" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.txt" />
+                <input 
+                  type="file" 
+                  id="resume" 
+                  name="resume" 
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.txt"
+                  onChange={(e) => {
+                    const file = e.currentTarget.files?.[0];
+                    if (file) {
+                      setSelectedFileName(file.name);
+                      setSelectedFileSize(file.size);
+                    } else {
+                      setSelectedFileName('');
+                      setSelectedFileSize(0);
+                    }
+                  }}
+                />
+                {selectedFileName && (
+                  <small style={{ color: 'var(--castletone)', marginTop: '0.4rem', display: 'block' }}>
+                    {selectedFileName} ({(selectedFileSize / 1024 / 1024).toFixed(2)} MB)
+                    {selectedFileSize > 10 * 1024 * 1024 && (
+                      <span style={{ color: '#e74c3c', fontWeight: 'bold' }}> ⚠️ Exceeds 10MB limit</span>
+                    )}
+                  </small>
+                )}
               </div>
               <div className="form-group">
                 <label htmlFor="coverLetter">Cover Letter</label>
