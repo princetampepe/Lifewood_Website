@@ -5,7 +5,6 @@ import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import ScrollProgress from './components/ScrollProgress';
 import ScrollToTop from './components/ScrollToTop';
-import PageTransition from './components/PageTransition';
 import ClickSpark from './components/ClickSpark';
 import ErrorBoundary from './components/ErrorBoundary';
 import SkipToMain from './components/SkipToMain';
@@ -99,7 +98,6 @@ const AppInner: FC = () => {
       <StructuredData />
       <ScrollToTop />
       <ScrollProgress />
-      <PageTransition />
 
       {/* ── Global fluid cursor effect (desktop only, skip on light pages) ── */}
       {!isTouchDevice && !isLightPage && (
