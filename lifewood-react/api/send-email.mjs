@@ -30,30 +30,31 @@ function buildEmailHTML({ applicantName, position, status, applicationDate }) {
         Dear ${firstName},
       </p>
       <p style="font-size:16px;line-height:1.7;color:#2a2a2a;margin:0 0 16px;">
-        We are thrilled to inform you that your application for the position of
+        We are excited to let you know that your application for the position of
         <strong style="color:${accentColor};">${position}</strong> at Lifewood has been
-        <strong style="color:#D4A017;">accepted</strong>!
+        <strong style="color:#D4A017;">accepted!</strong>
       </p>
       <p style="font-size:16px;line-height:1.7;color:#2a2a2a;margin:0 0 16px;">
-        Congratulations! Your qualifications and experience stood out among many applicants,
-        and we believe you will be a fantastic addition to our team.
+        As the next step in our hiring process, you will be invited for an <strong>onsite interview</strong>.
+        Our HR team will be reaching out to you within <strong>3-5 business days</strong> to confirm the exact
+        date, time, and venue. Please keep an eye on your email and phone for our follow-up.
       </p>
 
       <div style="background:#f8f6f1;border-left:4px solid #D4A017;border-radius:8px;padding:20px 24px;margin:24px 0;">
         <p style="font-size:15px;font-weight:700;color:#1A3A2A;margin:0 0 12px;">
-          <span style="margin-right:8px;">📋</span>Next Steps
+          <span style="margin-right:8px;">📋</span>What to Prepare
         </p>
         <ol style="font-size:14px;line-height:1.8;color:#2a2a2a;margin:0;padding-left:20px;">
-          <li>Our HR team will reach out to you within <strong>3-5 business days</strong> with onboarding details.</li>
-          <li>Please prepare a valid government-issued ID for verification purposes.</li>
-          <li>You will receive a separate email with your employment contract and start date information.</li>
-          <li>If you have any questions in the meantime, please email us at <a href="mailto:hr@lifewoodwebsite.com" style="color:#D4A017;text-decoration:none;font-weight:600;">hr@lifewoodwebsite.com</a>.</li>
+          <li>A valid <strong>government-issued ID</strong> for verification purposes.</li>
+          <li>An updated copy of your <strong>resume</strong> and any supporting documents.</li>
+          <li>Be ready to discuss your background, skills, and experience related to the <strong>${position}</strong> role.</li>
+          <li>For any questions, feel free to reach out at <a href="mailto:hr@lifewoodwebsite.com" style="color:#D4A017;text-decoration:none;font-weight:600;">hr@lifewoodwebsite.com</a>.</li>
         </ol>
       </div>
 
       <p style="font-size:16px;line-height:1.7;color:#2a2a2a;margin:0 0 16px;">
-        We are excited to welcome you to the Lifewood family and look forward to the contributions
-        you will bring to our mission of empowering businesses with AI-powered data solutions.
+        We are looking forward to meeting you and learning more about what you can bring to the Lifewood team.
+        See you soon!
       </p>
     `
     : `
@@ -216,7 +217,7 @@ export default async function handler(req, res) {
     }
 
     const subject = status === 'accepted'
-      ? `Congratulations! Your Application for ${position} Has Been Accepted — Lifewood`
+      ? `Your Application for ${position} Has Been Accepted — Lifewood`
       : `Application Update: ${position} — Lifewood`;
 
     const html = buildEmailHTML({
