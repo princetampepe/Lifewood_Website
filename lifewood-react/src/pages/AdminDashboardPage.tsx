@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, type FC, type FormEvent } from 'react';
+import { Helmet } from 'react-helmet-async';
 import {
   collection, onSnapshot, addDoc, updateDoc, deleteDoc,
   doc, serverTimestamp, orderBy, query, type Timestamp,
@@ -292,6 +293,9 @@ const AdminDashboardPage: FC = () => {
   return (
     <div className="admin-layout">
       <SEOHead title="Admin Dashboard" description="Lifewood Admin Dashboard" canonical="/admin" />
+      <Helmet>
+        <link rel="icon" href="/lifewood official logo/lifewood logo.png" type="image/png" />
+      </Helmet>
 
       {/* ── Sidebar ── */}
       <aside className={`admin-sidebar ${sidebarOpen ? 'open' : ''}`}>

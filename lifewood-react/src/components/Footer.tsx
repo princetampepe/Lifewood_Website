@@ -18,7 +18,8 @@ const Footer: FC = memo(() => {
           <div className="footer-top">
             <div className="footer-brand">
               <div className="footer-logo">
-                <img src="/lifewood official logo/use this.png" alt="Lifewood Data Technology" style={{ height: 36 }} />
+                <img src="/lifewood official logo/lifewood logo.png" alt="Lifewood Data Technology" style={{ height: 36 }} />
+                <span className="footer-logo-text">Lifewood</span>
               </div>
               <p>Empowering businesses with AI-powered data solutions across 30+ countries and 40+ delivery centers worldwide.</p>
               <div className="social-links">
