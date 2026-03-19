@@ -131,10 +131,8 @@ const AdminDashboardPage: FC = () => {
 
   const [modal, setModal] = useState<
     | { type: 'create-contact' }
-    | { type: 'edit-contact'; data: ContactMessage }
     | { type: 'view-contact'; data: ContactMessage }
     | { type: 'create-app' }
-    | { type: 'edit-app'; data: JobApplication }
     | { type: 'view-app'; data: JobApplication }
     | null
   >(null);
@@ -397,9 +395,6 @@ const AdminDashboardPage: FC = () => {
                     </button>
                   )}
                   <div className="admin-record-actions" onClick={(e) => e.stopPropagation()}>
-                    <button className="admin-action-btn edit" onClick={() => setModal({ type: 'edit-contact', data: c })}>
-                      <i className="fas fa-pen" /> Edit
-                    </button>
                     <button className="admin-action-btn delete" onClick={() => deleteContact(c.id)}>
                       <i className="fas fa-trash" /> Delete
                     </button>
@@ -495,9 +490,6 @@ const AdminDashboardPage: FC = () => {
                           </button>
                         </>
                       )}
-                      <button className="admin-action-btn edit" onClick={() => setModal({ type: 'edit-app', data: a })}>
-                        <i className="fas fa-pen" /> Edit
-                      </button>
                       <button className="admin-action-btn delete" onClick={() => deleteApplication(a.id)}>
                         <i className="fas fa-trash" /> Delete
                       </button>
@@ -520,16 +512,16 @@ const AdminDashboardPage: FC = () => {
             <button className="admin-modal-close" onClick={() => setModal(null)}><i className="fas fa-times" /></button>
 
             {modal.type === 'view-contact' && (
-              <ContactDetailView data={modal.data} onEdit={() => setModal({ type: 'edit-contact', data: modal.data })} />
+              <ContactDetailView data={modal.data} />
             )}
             {modal.type === 'view-app' && (
-              <AppDetailView data={modal.data} onEdit={() => setModal({ type: 'edit-app', data: modal.data })} />
+              <AppDetailView data={modal.data} />
             )}
-            {(modal.type === 'create-contact' || modal.type === 'edit-contact') && (
-              <ContactForm initial={modal.type === 'edit-contact' ? modal.data : undefined} onDone={() => setModal(null)} />
+            {modal.type === 'create-contact' && (
+              <ContactForm onDone={() => setModal(null)} />
             )}
-            {(modal.type === 'create-app' || modal.type === 'edit-app') && (
-              <ApplicationForm initial={modal.type === 'edit-app' ? modal.data : undefined} onDone={() => setModal(null)} />
+            {modal.type === 'create-app' && (
+              <ApplicationForm onDone={() => setModal(null)} />
             )}
           </div>
         </div>
@@ -541,7 +533,7 @@ const AdminDashboardPage: FC = () => {
 /* ================================================================
    CONTACT DETAIL VIEW
    ================================================================ */
-const ContactDetailView: FC<{ data: ContactMessage; onEdit: () => void }> = ({ data, onEdit }) => (
+const ContactDetailView: FC<{ data: ContactMessage }> = ({ data }) => (
   <div className="admin-detail-view">
     <div className="admin-detail-header">
       <Avatar name={data.name} size={52} />
@@ -564,16 +556,13 @@ const ContactDetailView: FC<{ data: ContactMessage; onEdit: () => void }> = ({ d
       <label>Received</label>
       <p>{fmtDate(data.createdAt)}</p>
     </div>
-    <button className="admin-create-btn" style={{ marginTop: '1.2rem' }} onClick={onEdit}>
-      <i className="fas fa-pen" /> Edit
-    </button>
   </div>
 );
 
 /* ================================================================
    APP DETAIL VIEW
    ================================================================ */
-const AppDetailView: FC<{ data: JobApplication; onEdit: () => void }> = ({ data, onEdit }) => (
+const AppDetailView: FC<{ data: JobApplication }> = ({ data }) => (
   <div className="admin-detail-view">
     <div className="admin-detail-header">
       <Avatar name={data.fullName} size={52} />
@@ -626,21 +615,17 @@ const AppDetailView: FC<{ data: JobApplication; onEdit: () => void }> = ({ data,
         </a>
       </div>
     )}
-    <button className="admin-create-btn" style={{ marginTop: '1.2rem' }} onClick={onEdit}>
-      <i className="fas fa-pen" /> Edit
-    </button>
   </div>
 );
 
 /* ================================================================
    CONTACT FORM
    ================================================================ */
-const ContactForm: FC<{ initial?: ContactMessage; onDone: () => void }> = ({ initial, onDone }) => {
-  const isEdit = !!initial;
-  const [name, setName] = useState(initial?.name ?? '');
-  const [email, setEmail] = useState(initial?.email ?? '');
-  const [subject, setSubject] = useState(initial?.subject ?? '');
-  const [message, setMessage] = useState(initial?.message ?? '');
+const ContactForm: FC<{ onDone: () => void }> = ({ onDone }) => {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [subject, setSubject] = useState('');
+  const [message, setMessage] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -653,8 +638,8 @@ const ContactForm: FC<{ initial?: ContactMessage; onDone: () => void }> = ({ ini
     setSaving(true); setError('');
     try {
       const data = { name: sName, email: sEmail, subject: sanitize(subject), message: sMsg };
-      if (isEdit) { await updateDoc(doc(firestore, 'contactMessages', initial.id), data); toast.success('Updated'); }
-      else { await addDoc(collection(firestore, 'contactMessages'), { ...data, createdAt: serverTimestamp() }); toast.success('Created'); }
+      await addDoc(collection(firestore, 'contactMessages'), { ...data, createdAt: serverTimestamp() });
+      toast.success('Message added');
       onDone();
     } catch { setError('Failed to save. Try again.'); }
     finally { setSaving(false); }
@@ -662,13 +647,13 @@ const ContactForm: FC<{ initial?: ContactMessage; onDone: () => void }> = ({ ini
 
   return (
     <form className="admin-modal-form" onSubmit={handleSubmit} noValidate>
-      <h2>{isEdit ? 'Edit Contact Message' : 'New Contact Message'}</h2>
+      <h2>New Contact Message</h2>
       <div className="form-group"><label>Name *</label><input type="text" value={name} onChange={(e) => setName(e.target.value)} required /></div>
       <div className="form-group"><label>Email *</label><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></div>
       <div className="form-group"><label>Subject</label><input type="text" value={subject} onChange={(e) => setSubject(e.target.value)} /></div>
       <div className="form-group"><label>Message *</label><textarea rows={5} value={message} onChange={(e) => setMessage(e.target.value)} required /></div>
       {error && <div className="form-status error">{error}</div>}
-      <button type="submit" className="form-btn" disabled={saving}>{saving ? 'Saving…' : isEdit ? 'Update' : 'Create'} <i className="fas fa-check" /></button>
+      <button type="submit" className="form-btn" disabled={saving}>{saving ? 'Saving…' : 'Create'} <i className="fas fa-check" /></button>
     </form>
   );
 };
@@ -676,13 +661,12 @@ const ContactForm: FC<{ initial?: ContactMessage; onDone: () => void }> = ({ ini
 /* ================================================================
    APPLICATION FORM
    ================================================================ */
-const ApplicationForm: FC<{ initial?: JobApplication; onDone: () => void }> = ({ initial, onDone }) => {
-  const isEdit = !!initial;
-  const [fullName, setFullName] = useState(initial?.fullName ?? '');
-  const [email, setEmail] = useState(initial?.email ?? '');
-  const [phone, setPhone] = useState(initial?.phone ?? '');
-  const [position, setPosition] = useState(initial?.position ?? '');
-  const [coverLetter, setCoverLetter] = useState(initial?.coverLetter ?? '');
+const ApplicationForm: FC<{ onDone: () => void }> = ({ onDone }) => {
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [position, setPosition] = useState('');
+  const [coverLetter, setCoverLetter] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -695,8 +679,8 @@ const ApplicationForm: FC<{ initial?: JobApplication; onDone: () => void }> = ({
     setSaving(true); setError('');
     try {
       const data = { fullName: sName, email: sEmail, phone: sanitize(phone), position, coverLetter: sanitize(coverLetter) };
-      if (isEdit) { await updateDoc(doc(firestore, 'jobApplications', initial.id), data); toast.success('Updated'); }
-      else { await addDoc(collection(firestore, 'jobApplications'), { ...data, status: 'pending', statusUpdatedAt: null, emailSentAt: null, createdAt: serverTimestamp() }); toast.success('Created'); }
+      await addDoc(collection(firestore, 'jobApplications'), { ...data, status: 'pending', statusUpdatedAt: null, emailSentAt: null, createdAt: serverTimestamp() });
+      toast.success('Application created');
       onDone();
     } catch { setError('Failed to save. Try again.'); }
     finally { setSaving(false); }
@@ -704,7 +688,7 @@ const ApplicationForm: FC<{ initial?: JobApplication; onDone: () => void }> = ({
 
   return (
     <form className="admin-modal-form" onSubmit={handleSubmit} noValidate>
-      <h2>{isEdit ? 'Edit Application' : 'New Application'}</h2>
+      <h2>New Application</h2>
       <div className="form-group"><label>Full Name *</label><input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} required /></div>
       <div className="form-group"><label>Email *</label><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></div>
       <div className="form-group"><label>Phone</label><input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
@@ -717,7 +701,7 @@ const ApplicationForm: FC<{ initial?: JobApplication; onDone: () => void }> = ({
       </div>
       <div className="form-group"><label>Cover Letter</label><textarea rows={5} value={coverLetter} onChange={(e) => setCoverLetter(e.target.value)} /></div>
       {error && <div className="form-status error">{error}</div>}
-      <button type="submit" className="form-btn" disabled={saving}>{saving ? 'Saving…' : isEdit ? 'Update' : 'Create'} <i className="fas fa-check" /></button>
+      <button type="submit" className="form-btn" disabled={saving}>{saving ? 'Saving…' : 'Create'} <i className="fas fa-check" /></button>
     </form>
   );
 };
