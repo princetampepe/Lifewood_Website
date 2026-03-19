@@ -1,5 +1,5 @@
 import { useState, useMemo, type FC, type FormEvent } from 'react';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, updateDoc, doc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { firestore, storage } from '../firebase';
 import AnimReveal from '../components/AnimReveal';
@@ -45,14 +45,10 @@ const CareersPage: FC = () => {
       const position = (form.elements.namedItem('position') as HTMLSelectElement).value;
       const coverLetter = (form.elements.namedItem('coverLetter') as HTMLTextAreaElement).value.trim();
       const resumeInput = form.elements.namedItem('resume') as HTMLInputElement;
+      const file = resumeInput?.files?.[0];
       
-      let resumeUrl = '';
-      
-      // Upload resume file if provided
-      if (resumeInput?.files?.[0]) {
-        const file = resumeInput.files[0];
-        
-        // Validate file size (max 10MB)
+      // Validate file size if provided
+      if (file) {
         const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
         if (file.size > MAX_FILE_SIZE) {
           setFormStatus({ type: 'error', msg: 'File size exceeds 10MB limit. Please upload a smaller file.' });
@@ -60,22 +56,16 @@ const CareersPage: FC = () => {
           setTimeout(() => setFormStatus(null), 6000);
           return;
         }
-        
-        const timestamp = Date.now();
-        const fileName = `${timestamp}_${email}_${file.name}`;
-        const storageRef = ref(storage, `jobApplications/${fileName}`);
-        
-        await uploadBytes(storageRef, file);
-        resumeUrl = await getDownloadURL(storageRef);
       }
 
-      await addDoc(collection(firestore, 'jobApplications'), {
+      // Create Firestore record FIRST (without file upload)
+      const docRef = await addDoc(collection(firestore, 'jobApplications'), {
         fullName,
         email,
         phone,
         position,
         coverLetter,
-        resumeUrl: resumeUrl || null,
+        resumeUrl: null, // Start with null
         status: 'pending',
         statusUpdatedAt: null,
         emailSentAt: null,
@@ -87,6 +77,26 @@ const CareersPage: FC = () => {
       setSelectedPosition('');
       setSelectedFileName('');
       setSelectedFileSize(0);
+
+      // Upload file in the background (after showing success)
+      if (file) {
+        try {
+          const timestamp = Date.now();
+          const fileName = `${timestamp}_${email}_${file.name}`;
+          const storageRef = ref(storage, `jobApplications/${fileName}`);
+          
+          await uploadBytes(storageRef, file);
+          const resumeUrl = await getDownloadURL(storageRef);
+          
+          // Update the Firestore document with the file URL
+          await updateDoc(doc(firestore, 'jobApplications', docRef.id), {
+            resumeUrl,
+          });
+        } catch (fileError) {
+          console.error('File upload failed:', fileError);
+          // Application is already submitted, file upload is just a bonus
+        }
+      }
     } catch {
       setFormStatus({ type: 'error', msg: 'Something went wrong. Please try again later.' });
     } finally {
