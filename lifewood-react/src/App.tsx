@@ -83,6 +83,8 @@ function useIsLightPage() {
 const AppInner: FC = () => {
   const isTouchDevice = useIsTouchDevice();
   const isLightPage = useIsLightPage();
+  const { pathname } = useLocation();
+  const isAdminSection = pathname.startsWith('/admin');
 
   /* ── Smooth scroll (Lenis) — skip on light pages ── */
   useLenis(isLightPage ? null : { lerp: 0.1, duration: 1.2 });
@@ -143,7 +145,7 @@ const AppInner: FC = () => {
 
       {/* ── Global click spark overlay ── */}
       <ClickSpark sparkColor="var(--saffron)" sparkCount={10} sparkRadius={20} duration={500}>
-        <Navbar />
+        {!isAdminSection && <Navbar />}
 
       <main id="main-content" role="main">
         <Suspense fallback={<PageLoader />}>
@@ -171,8 +173,8 @@ const AppInner: FC = () => {
         </Suspense>
       </main>
 
-      <Footer />
-      <CookieConsent />
+      {!isAdminSection && <Footer />}
+      {!isAdminSection && <CookieConsent />}
       </ClickSpark>
     </>
   );
