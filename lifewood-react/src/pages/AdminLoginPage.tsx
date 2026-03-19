@@ -9,6 +9,7 @@ const AdminLoginPage: FC = () => {
   const { isAdmin, loading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -58,14 +59,24 @@ const AdminLoginPage: FC = () => {
           </div>
           <div className="form-group">
             <label htmlFor="admin-password">Password</label>
-            <input
-              type="password"
-              id="admin-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              autoComplete="current-password"
-            />
+            <div className="password-input-wrapper">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                id="admin-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                autoComplete="current-password"
+              />
+              <button
+                type="button"
+                className="password-toggle-btn"
+                onClick={() => setShowPassword(!showPassword)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                <i className={`fas fa-${showPassword ? 'eye' : 'eye-slash'}`} />
+              </button>
+            </div>
           </div>
 
           {error && <div className="form-status error">{error}</div>}

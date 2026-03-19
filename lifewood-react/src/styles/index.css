@@ -2714,6 +2714,24 @@ textarea:focus-visible,
 .admin-login-card h1 i { color: var(--saffron); margin-right: 0.5rem; }
 .admin-login-card > p { color: var(--castletone); margin-bottom: 1.5rem; font-size: 0.9rem; }
 
+.password-input-wrapper {
+  position: relative; display: flex; align-items: center;
+}
+.password-input-wrapper input {
+  width: 100%; padding-right: 2.5rem;
+}
+.password-toggle-btn {
+  position: absolute; right: 0.75rem;
+  background: none; border: none; cursor: pointer;
+  color: var(--castletone); font-size: 0.95rem;
+  padding: 0.5rem 0.75rem;
+  display: flex; align-items: center; justify-content: center;
+  transition: color 0.2s;
+}
+.password-toggle-btn:hover {
+  color: var(--saffron);
+}
+
 /* ================================================================
    ADMIN DASHBOARD — Sidebar Layout
    ================================================================ */
