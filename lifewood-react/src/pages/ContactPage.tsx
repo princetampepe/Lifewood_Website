@@ -9,10 +9,34 @@ import SEOHead from '../components/SEOHead';
 /* ── Simple validation helpers ── */
 const sanitize = (s: string) => s.replace(/<[^>]*>/g, '').trim();
 const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+const isValidPhone = (phone: string): boolean => {
+  if (!phone) return true; // Phone is optional
+  const cleaned = phone.replace(/\D/g, ''); // Extract only digits
+  
+  // Philippine format validation:
+  // +63 9XX XXX XXXX (mobile) = 12 digits total
+  // +63 2 XXXX XXXX (Manila landline) = 11 digits total
+  // +63 XX XXXX XXXX (provincial) = 11-12 digits total
+  // 09XX XXX XXXX format = 11 digits
+  
+  // Check if it starts with +63 (country code)
+  if (phone.startsWith('+63')) {
+    return cleaned.length >= 11 && cleaned.length <= 12; // 63 + 9-10 digits
+  }
+  
+  // Check if it's the 09XX format (local Philippine)
+  if (phone.startsWith('09') || phone.startsWith('9')) {
+    return cleaned.length === 10 || cleaned.length === 11;
+  }
+  
+  // Generic validation for other countries (7-15 digits)
+  return cleaned.length >= 7 && cleaned.length <= 15;
+};
 
 interface FormErrors {
   name?: string;
   email?: string;
+  phone?: string;
   message?: string;
 }
 
@@ -26,9 +50,11 @@ const ContactPage: FC = () => {
     const errs: FormErrors = {};
     const name = sanitize((form.elements.namedItem('name') as HTMLInputElement).value);
     const email = sanitize((form.elements.namedItem('email') as HTMLInputElement).value);
+    const phone = sanitize((form.elements.namedItem('phone') as HTMLInputElement)?.value || '');
     const message = sanitize((form.elements.namedItem('message') as HTMLTextAreaElement).value);
     if (!name || name.length < 2) errs.name = 'Please enter your full name (at least 2 characters).';
     if (!email || !isValidEmail(email)) errs.email = 'Please enter a valid email address.';
+    if (phone && !isValidPhone(phone)) errs.phone = 'Please enter a valid phone number (e.g., +1 (234) 567-8900).';
     if (!message || message.length < 10) errs.message = 'Message must be at least 10 characters.';
     return errs;
   };
@@ -53,12 +79,14 @@ const ContactPage: FC = () => {
     try {
       const name = sanitize((form.elements.namedItem('name') as HTMLInputElement).value);
       const email = sanitize((form.elements.namedItem('email') as HTMLInputElement).value);
+      const phone = sanitize((form.elements.namedItem('phone') as HTMLInputElement)?.value || '');
       const subject = sanitize((form.elements.namedItem('subject') as HTMLInputElement).value);
       const message = sanitize((form.elements.namedItem('message') as HTMLTextAreaElement).value);
 
       await addDoc(collection(firestore, 'contactMessages'), {
         name,
         email,
+        phone: phone || undefined,
         subject,
         message,
         createdAt: serverTimestamp(),
@@ -77,6 +105,18 @@ const ContactPage: FC = () => {
 
   const clearError = (field: keyof FormErrors) => {
     if (errors[field]) setErrors((prev) => ({ ...prev, [field]: undefined }));
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const phone = e.currentTarget.value.trim();
+    if (phone && !isValidPhone(phone)) {
+      setErrors((prev) => ({
+        ...prev,
+        phone: 'Enter a valid phone number (e.g., +63 9XX XXX XXXX or 09XX XXX XXXX).',
+      }));
+    } else {
+      clearError('phone');
+    }
   };
 
   return (
@@ -162,8 +202,18 @@ const ContactPage: FC = () => {
               </div>
 
               <div className="form-group">
-                <label htmlFor="ct-subject">Subject</label>
-                <input type="text" id="ct-subject" name="subject" autoComplete="off" />
+                <label htmlFor="ct-phone">Phone Number</label>
+                <input
+                  type="tel"
+                  id="ct-phone"
+                  name="phone"
+                  autoComplete="tel"
+                  aria-invalid={!!errors.phone}
+                  aria-describedby={errors.phone ? 'ct-phone-err' : undefined}
+                  onChange={handlePhoneChange}
+                  placeholder="e.g., +63 915 123 4567 or 09151234567"
+                />
+                {errors.phone && <span id="ct-phone-err" className="form-error" role="alert">{errors.phone}</span>}
               </div>
 
               <div className="form-group">

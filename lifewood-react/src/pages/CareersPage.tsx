@@ -8,6 +8,42 @@ import Typewriter from '../components/Typewriter';
 import { positions, perks } from '../data/siteData';
 import SEOHead from '../components/SEOHead';
 
+/* ── Validation Helpers ── */
+const isValidEmail = (email: string): boolean => {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+};
+
+const isValidPhone = (phone: string): boolean => {
+  if (!phone) return true; // Phone is optional
+  const cleaned = phone.replace(/\D/g, ''); // Extract only digits
+  
+  // Philippine format validation:
+  // +63 9XX XXX XXXX (mobile) = 12 digits total
+  // +63 2 XXXX XXXX (Manila landline) = 11 digits total
+  // +63 XX XXXX XXXX (provincial) = 11-12 digits total
+  // 09XX XXX XXXX format = 11 digits
+  
+  // Check if it starts with +63 (country code)
+  if (phone.startsWith('+63')) {
+    return cleaned.length >= 11 && cleaned.length <= 12; // 63 + 9-10 digits
+  }
+  
+  // Check if it's the 09XX format (local Philippine)
+  if (phone.startsWith('09') || phone.startsWith('9')) {
+    return cleaned.length === 10 || cleaned.length === 11;
+  }
+  
+  // Generic validation for other countries (7-15 digits)
+  return cleaned.length >= 7 && cleaned.length <= 15;
+};
+
+interface FormErrors {
+  fullName?: string;
+  email?: string;
+  phone?: string;
+  position?: string;
+}
+
 const CareersPage: FC = () => {
   const [activeTab, setActiveTab] = useState<'positions' | 'apply'>('positions');
   const [searchTerm, setSearchTerm] = useState('');
@@ -33,18 +69,46 @@ const CareersPage: FC = () => {
   };
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<FormErrors>({});
+
+  const clearError = (field: keyof FormErrors) => {
+    if (errors[field]) setErrors((prev) => ({ ...prev, [field]: undefined }));
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const phone = e.currentTarget.value.trim();
+    if (phone && !isValidPhone(phone)) {
+      setErrors((prev) => ({
+        ...prev,
+        phone: 'Enter a valid phone number (e.g., +63 9XX XXX XXXX or 09XX XXX XXXX).',
+      }));
+    } else {
+      clearError('phone');
+    }
+  };
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    const form = e.currentTarget;
+    const fullName = (form.elements.namedItem('fullName') as HTMLInputElement).value.trim();
+    const email = (form.elements.namedItem('email') as HTMLInputElement).value.trim();
+    const phone = (form.elements.namedItem('phone') as HTMLInputElement).value.trim();
+    const position = (form.elements.namedItem('position') as HTMLSelectElement).value;
+    const coverLetter = (form.elements.namedItem('coverLetter') as HTMLTextAreaElement).value.trim();
+
+    // Validate form
+    const newErrors: FormErrors = {};
+    if (!fullName || fullName.length < 2) newErrors.fullName = 'Please enter your full name (at least 2 characters).';
+    if (!email) newErrors.email = 'Email address is required.';
+    else if (!isValidEmail(email)) newErrors.email = 'Please enter a valid email address.';
+    if (phone && !isValidPhone(phone)) newErrors.phone = 'Please enter a valid phone number (e.g., +1234567890 or 123-456-7890).';
+    if (!position) newErrors.position = 'Please select a position.';
+
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) return;
+
     setIsSubmitting(true);
     try {
-      const form = e.currentTarget;
-      const fullName = (form.elements.namedItem('fullName') as HTMLInputElement).value.trim();
-      const email = (form.elements.namedItem('email') as HTMLInputElement).value.trim();
-      const phone = (form.elements.namedItem('phone') as HTMLInputElement).value.trim();
-      const position = (form.elements.namedItem('position') as HTMLSelectElement).value;
-      const coverLetter = (form.elements.namedItem('coverLetter') as HTMLTextAreaElement).value.trim();
-
       await addDoc(collection(firestore, 'jobApplications'), {
         fullName,
         email,
@@ -62,6 +126,7 @@ const CareersPage: FC = () => {
       setSelectedPosition('');
       setSelectedFileName('');
       setSelectedFileSize(0);
+      setErrors({});
     } catch {
       setFormStatus({ type: 'error', msg: 'Something went wrong. Please try again later.' });
     } finally {
@@ -182,33 +247,71 @@ const CareersPage: FC = () => {
               direction="top"
               className="careers-panel-blur-title"
             />
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} noValidate>
               <div className="form-group">
-                <label htmlFor="fullName">Full Name *</label>
-                <input type="text" id="fullName" name="fullName" required />
+                <label htmlFor="fullName">Full Name <span aria-hidden="true">*</span></label>
+                <input
+                  type="text"
+                  id="fullName"
+                  name="fullName"
+                  required
+                  aria-required="true"
+                  aria-invalid={!!errors.fullName}
+                  aria-describedby={errors.fullName ? 'fullName-err' : undefined}
+                  onChange={() => clearError('fullName')}
+                />
+                {errors.fullName && <span id="fullName-err" className="form-error" role="alert">{errors.fullName}</span>}
               </div>
               <div className="form-group">
-                <label htmlFor="email">Email Address *</label>
-                <input type="email" id="email" name="email" required />
+                <label htmlFor="email">Email Address <span aria-hidden="true">*</span></label>
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  required
+                  autoComplete="email"
+                  aria-required="true"
+                  aria-invalid={!!errors.email}
+                  aria-describedby={errors.email ? 'email-err' : undefined}
+                  onChange={() => clearError('email')}
+                />
+                {errors.email && <span id="email-err" className="form-error" role="alert">{errors.email}</span>}
               </div>
               <div className="form-group">
                 <label htmlFor="phone">Phone Number</label>
-                <input type="tel" id="phone" name="phone" />
+                <input
+                  type="tel"
+                  id="phone"
+                  name="phone"
+                  autoComplete="tel"
+                  aria-invalid={!!errors.phone}
+                  aria-describedby={errors.phone ? 'phone-err' : undefined}
+                  onChange={handlePhoneChange}
+                  placeholder="e.g., +63 915 123 4567 or 09151234567"
+                />
+                {errors.phone && <span id="phone-err" className="form-error" role="alert">{errors.phone}</span>}
               </div>
               <div className="form-group">
-                <label htmlFor="position">Position *</label>
+                <label htmlFor="position">Position <span aria-hidden="true">*</span></label>
                 <select
                   id="position"
                   name="position"
                   required
+                  aria-required="true"
+                  aria-invalid={!!errors.position}
+                  aria-describedby={errors.position ? 'position-err' : undefined}
                   value={selectedPosition}
-                  onChange={(e) => setSelectedPosition(e.target.value)}
+                  onChange={(e) => {
+                    setSelectedPosition(e.target.value);
+                    clearError('position');
+                  }}
                 >
                   <option value="">Select a position</option>
                   {positions.map((p) => (
                     <option key={p.value} value={p.value}>{p.title}</option>
                   ))}
                 </select>
+                {errors.position && <span id="position-err" className="form-error" role="alert">{errors.position}</span>}
               </div>
               <div className="form-group">
                 <label htmlFor="resume">Resume / CV (email to <a href="mailto:hr@lifewood.com">hr@lifewood.com</a>)</label>

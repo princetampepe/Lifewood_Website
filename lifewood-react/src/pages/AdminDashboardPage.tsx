@@ -132,6 +132,7 @@ const AdminDashboardPage: FC = () => {
   const [modal, setModal] = useState<
     | { type: 'create-contact' }
     | { type: 'view-contact'; data: ContactMessage }
+    | { type: 'reply-contact'; data: ContactMessage }
     | { type: 'create-app' }
     | { type: 'view-app'; data: JobApplication }
     | null
@@ -512,7 +513,10 @@ const AdminDashboardPage: FC = () => {
             <button className="admin-modal-close" onClick={() => setModal(null)}><i className="fas fa-times" /></button>
 
             {modal.type === 'view-contact' && (
-              <ContactDetailView data={modal.data} />
+              <ContactDetailView data={modal.data} onReply={() => setModal({ type: 'reply-contact', data: modal.data })} />
+            )}
+            {modal.type === 'reply-contact' && (
+              <ContactReplyForm data={modal.data} onDone={() => setModal(null)} />
             )}
             {modal.type === 'view-app' && (
               <AppDetailView data={modal.data} />
@@ -533,7 +537,7 @@ const AdminDashboardPage: FC = () => {
 /* ================================================================
    CONTACT DETAIL VIEW
    ================================================================ */
-const ContactDetailView: FC<{ data: ContactMessage }> = ({ data }) => (
+const ContactDetailView: FC<{ data: ContactMessage; onReply: () => void }> = ({ data, onReply }) => (
   <div className="admin-detail-view">
     <div className="admin-detail-header">
       <Avatar name={data.name} size={52} />
@@ -556,6 +560,9 @@ const ContactDetailView: FC<{ data: ContactMessage }> = ({ data }) => (
       <label>Received</label>
       <p>{fmtDate(data.createdAt)}</p>
     </div>
+    <button onClick={onReply} style={{ marginTop: '16px', padding: '10px 16px', backgroundColor: '#D4A017', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px', fontWeight: '600' }}>
+      <i className="fas fa-reply" /> Send Reply
+    </button>
   </div>
 );
 
@@ -617,6 +624,74 @@ const AppDetailView: FC<{ data: JobApplication }> = ({ data }) => (
     )}
   </div>
 );
+
+/* ================================================================
+   CONTACT REPLY FORM
+   ================================================================ */
+const ContactReplyForm: FC<{ data: ContactMessage; onDone: () => void }> = ({ data, onDone }) => {
+  const [subject, setSubject] = useState(`Re: ${data.subject || 'Your Message'}`);
+  const [message, setMessage] = useState('');
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (message.trim().length < 10) {
+      setError('Reply must be at least 10 characters.');
+      return;
+    }
+
+    setSending(true);
+    setError('');
+    try {
+      const response = await fetch('/api/send-reply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipientEmail: data.email,
+          recipientName: data.name,
+          subject,
+          message: message.trim(),
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to send email.');
+      }
+
+      toast.success('Reply sent successfully!');
+      onDone();
+    } catch (err: any) {
+      setError(err.message || 'Failed to send reply.');
+      console.error('Error:', err);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <form className="admin-modal-form" onSubmit={handleSubmit} noValidate>
+      <h2>Reply to {data.name}</h2>
+      <div className="form-group">
+        <label>To</label>
+        <input type="email" value={data.email} disabled style={{ opacity: 0.6, cursor: 'not-allowed' }} />
+      </div>
+      <div className="form-group">
+        <label>Subject</label>
+        <input type="text" value={subject} onChange={(e) => setSubject(e.target.value)} />
+      </div>
+      <div className="form-group">
+        <label>Message *</label>
+        <textarea rows={6} value={message} onChange={(e) => setMessage(e.target.value)} required placeholder="Type your reply here..." />
+      </div>
+      {error && <div className="form-status error">{error}</div>}
+      <button type="submit" className="form-btn" disabled={sending}>
+        {sending ? 'Sending…' : 'Send Reply'} <i className="fas fa-paper-plane" />
+      </button>
+    </form>
+  );
+};
 
 /* ================================================================
    CONTACT FORM
