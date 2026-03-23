@@ -363,7 +363,7 @@ const AdminDashboardPage: FC = () => {
                 <option value="newest">Newest first</option>
                 <option value="oldest">Oldest first</option>
               </select>
-              <button className="admin-create-btn" onClick={() => setModal({ type: 'create-contact' })}>
+              <button className="admin-create-btn" onClick={() => setModal({ type: 'create-contact' })} style={{ display: 'none' }}>
                 <i className="fas fa-plus" /> New
               </button>
             </div>
@@ -417,7 +417,7 @@ const AdminDashboardPage: FC = () => {
                 <option value="newest">Newest first</option>
                 <option value="oldest">Oldest first</option>
               </select>
-              <button className="admin-create-btn" onClick={() => setModal({ type: 'create-app' })}>
+              <button className="admin-create-btn" onClick={() => setModal({ type: 'create-app' })} style={{ display: 'none' }}>
                 <i className="fas fa-plus" /> New
               </button>
             </div>
