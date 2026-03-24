@@ -164,7 +164,7 @@ const ProfileModal: FC<{ user: User | null; onClose: () => void }> = ({ user, on
 const AdminDashboardPage: FC = () => {
   const { logout, user } = useAuth();
 
-  const [section, setSection] = useState<'contacts' | 'applications' | 'processed'>('contacts');
+  const [section, setSection] = useState<'contacts' | 'applications' | 'accepted' | 'rejected'>('contacts');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
 
@@ -281,6 +281,30 @@ const AdminDashboardPage: FC = () => {
     return appSort === 'oldest' ? [...result].reverse() : result;
   }, [applications, appSearch, appSort]);
 
+  const applicationsAccepted = useMemo(() => {
+    let result = applications.filter((a) => a.status === 'accepted');
+    if (appSearch.trim()) {
+      const q = appSearch.toLowerCase();
+      result = result.filter((a) =>
+        a.fullName.toLowerCase().includes(q) || a.email.toLowerCase().includes(q) ||
+        a.position.toLowerCase().includes(q) || a.phone.toLowerCase().includes(q),
+      );
+    }
+    return appSort === 'oldest' ? [...result].reverse() : result;
+  }, [applications, appSearch, appSort]);
+
+  const applicationsRejected = useMemo(() => {
+    let result = applications.filter((a) => a.status === 'rejected');
+    if (appSearch.trim()) {
+      const q = appSearch.toLowerCase();
+      result = result.filter((a) =>
+        a.fullName.toLowerCase().includes(q) || a.email.toLowerCase().includes(q) ||
+        a.position.toLowerCase().includes(q) || a.phone.toLowerCase().includes(q),
+      );
+    }
+    return appSort === 'oldest' ? [...result].reverse() : result;
+  }, [applications, appSearch, appSort]);
+
   const toggleExpand = (id: string) => setExpandedCards((prev) => {
     const next = new Set(prev);
     next.has(id) ? next.delete(id) : next.add(id);
@@ -349,7 +373,7 @@ const AdminDashboardPage: FC = () => {
     }
   }, []);
 
-  const navTo = (s: 'contacts' | 'applications' | 'processed') => { setSection(s); setSidebarOpen(false); };
+  const navTo = (s: 'contacts' | 'applications' | 'accepted' | 'rejected') => { setSection(s); setSidebarOpen(false); };
 
   /* ── Render ── */
   return (
@@ -380,10 +404,15 @@ const AdminDashboardPage: FC = () => {
             <span>Job Applications</span>
             {statusCounts.pending > 0 && <span className="admin-nav-badge">{statusCounts.pending}</span>}
           </button>
-          <button className={`admin-nav-item ${section === 'processed' ? 'active' : ''}`} onClick={() => navTo('processed')}>
-            <i className="fas fa-check-double" />
-            <span>Processed</span>
-            {(statusCounts.accepted + statusCounts.rejected) > 0 && <span className="admin-nav-count">{statusCounts.accepted + statusCounts.rejected}</span>}
+          <button className={`admin-nav-item ${section === 'accepted' ? 'active' : ''}`} onClick={() => navTo('accepted')}>
+            <i className="fas fa-check-circle" />
+            <span>Accepted</span>
+            {statusCounts.accepted > 0 && <span className="admin-nav-count">{statusCounts.accepted}</span>}
+          </button>
+          <button className={`admin-nav-item ${section === 'rejected' ? 'active' : ''}`} onClick={() => navTo('rejected')}>
+            <i className="fas fa-times-circle" />
+            <span>Rejected</span>
+            {statusCounts.rejected > 0 && <span className="admin-nav-count">{statusCounts.rejected}</span>}
           </button>
         </nav>
 
@@ -409,7 +438,7 @@ const AdminDashboardPage: FC = () => {
             <i className="fas fa-bars" />
           </button>
           <h1 className="admin-topbar-title">
-            {section === 'contacts' ? 'Contact Messages' : section === 'applications' ? 'Job Applications' : 'Processed Applications'}
+            {section === 'contacts' ? 'Contact Messages' : section === 'applications' ? 'Job Applications' : section === 'accepted' ? 'Accepted Applications' : 'Rejected Applications'}
           </h1>
           <div className="admin-topbar-stats">
             {section === 'applications' ? (
@@ -418,11 +447,10 @@ const AdminDashboardPage: FC = () => {
                 <span className="admin-topbar-stat accepted">{statusCounts.accepted} accepted</span>
                 <span className="admin-topbar-stat rejected">{statusCounts.rejected} rejected</span>
               </>
-            ) : section === 'processed' ? (
-              <>
-                <span className="admin-topbar-stat accepted">{statusCounts.accepted} accepted</span>
-                <span className="admin-topbar-stat rejected">{statusCounts.rejected} rejected</span>
-              </>
+            ) : section === 'accepted' ? (
+              <span className="admin-topbar-stat accepted">{statusCounts.accepted} total</span>
+            ) : section === 'rejected' ? (
+              <span className="admin-topbar-stat rejected">{statusCounts.rejected} total</span>
             ) : (
               <span className="admin-topbar-stat total">{contacts.length} total</span>
             )}
@@ -620,13 +648,13 @@ const AdminDashboardPage: FC = () => {
           </div>
         )}
 
-        {/* ── PROCESSED APPLICATIONS ── */}
-        {section === 'processed' && (
+        {/* ── ACCEPTED APPLICATIONS ── */}
+        {section === 'accepted' && (
           <div className="admin-section">
             <div className="admin-section-toolbar">
               <div className="admin-search-wrap">
                 <i className="fas fa-search" />
-                <input type="text" placeholder="Search processed applications…" value={appSearch} onChange={(e) => setAppSearch(e.target.value)} />
+                <input type="text" placeholder="Search accepted applications…" value={appSearch} onChange={(e) => setAppSearch(e.target.value)} />
               </div>
               <select className="admin-sort-select" value={appSort} onChange={(e) => setAppSort(e.target.value as SortOption)}>
                 <option value="newest">Newest first</option>
@@ -636,12 +664,12 @@ const AdminDashboardPage: FC = () => {
 
             {appsLoading && <div className="admin-loading"><div className="page-loader-spinner" /> Loading…</div>}
             {appsError && <div className="form-status error">{appsError}</div>}
-            {!appsLoading && !appsError && applicationsProcessed.length === 0 && (
-              <div className="admin-empty"><i className="fas fa-inbox" /><p>No processed applications yet.</p></div>
+            {!appsLoading && !appsError && applicationsAccepted.length === 0 && (
+              <div className="admin-empty"><i className="fas fa-inbox" /><p>No accepted applications yet.</p></div>
             )}
 
             <div className="admin-cards">
-              {applicationsProcessed.map((a) => (
+              {applicationsAccepted.map((a) => (
                 <div key={a.id} className={`admin-record-card app-status-${a.status}`} onClick={() => setModal({ type: 'view-app', data: a })}>
                   <div className="admin-record-header">
                     <div className="admin-record-identity">
@@ -650,8 +678,7 @@ const AdminDashboardPage: FC = () => {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
                           <h3>{a.fullName}</h3>
                           <span className={`app-status-badge status-${a.status}`}>
-                            {a.status === 'accepted' && <><i className="fas fa-check-circle" /> Accepted</>}
-                            {a.status === 'rejected' && <><i className="fas fa-times-circle" /> Rejected</>}
+                            <i className="fas fa-check-circle" /> Accepted
                           </span>
                         </div>
                         <span className="admin-record-email">{a.email}</span>
@@ -663,12 +690,68 @@ const AdminDashboardPage: FC = () => {
                   {a.phone && <p className="admin-record-meta"><i className="fas fa-phone" /> {a.phone}</p>}
                   <p className="admin-record-meta"><i className="fas fa-briefcase" /> {getPositionTitle(a.position)}</p>
 
-                  {a.status !== 'pending' && (
-                    <p className="admin-email-status">
-                      <i className="fas fa-paper-plane" />
-                      {a.emailSentAt ? `Email sent ${relativeTime(a.emailSentAt)}` : 'Email not delivered'}
-                    </p>
-                  )}
+                  <p className="admin-email-status">
+                    <i className="fas fa-paper-plane" />
+                    {a.emailSentAt ? `Email sent ${relativeTime(a.emailSentAt)}` : 'Email not delivered'}
+                  </p>
+
+                  <div className="admin-record-actions" onClick={(e) => e.stopPropagation()}>
+                    <button className="admin-action-btn delete" onClick={() => deleteApplication(a.id)}>
+                      <i className="fas fa-trash" /> Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── REJECTED APPLICATIONS ── */}
+        {section === 'rejected' && (
+          <div className="admin-section">
+            <div className="admin-section-toolbar">
+              <div className="admin-search-wrap">
+                <i className="fas fa-search" />
+                <input type="text" placeholder="Search rejected applications…" value={appSearch} onChange={(e) => setAppSearch(e.target.value)} />
+              </div>
+              <select className="admin-sort-select" value={appSort} onChange={(e) => setAppSort(e.target.value as SortOption)}>
+                <option value="newest">Newest first</option>
+                <option value="oldest">Oldest first</option>
+              </select>
+            </div>
+
+            {appsLoading && <div className="admin-loading"><div className="page-loader-spinner" /> Loading…</div>}
+            {appsError && <div className="form-status error">{appsError}</div>}
+            {!appsLoading && !appsError && applicationsRejected.length === 0 && (
+              <div className="admin-empty"><i className="fas fa-inbox" /><p>No rejected applications yet.</p></div>
+            )}
+
+            <div className="admin-cards">
+              {applicationsRejected.map((a) => (
+                <div key={a.id} className={`admin-record-card app-status-${a.status}`} onClick={() => setModal({ type: 'view-app', data: a })}>
+                  <div className="admin-record-header">
+                    <div className="admin-record-identity">
+                      <Avatar name={a.fullName} />
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                          <h3>{a.fullName}</h3>
+                          <span className={`app-status-badge status-${a.status}`}>
+                            <i className="fas fa-times-circle" /> Rejected
+                          </span>
+                        </div>
+                        <span className="admin-record-email">{a.email}</span>
+                      </div>
+                    </div>
+                    <span className="admin-record-date" title={fmtDate(a.statusUpdatedAt)}>{relativeTime(a.statusUpdatedAt)}</span>
+                  </div>
+
+                  {a.phone && <p className="admin-record-meta"><i className="fas fa-phone" /> {a.phone}</p>}
+                  <p className="admin-record-meta"><i className="fas fa-briefcase" /> {getPositionTitle(a.position)}</p>
+
+                  <p className="admin-email-status">
+                    <i className="fas fa-paper-plane" />
+                    {a.emailSentAt ? `Email sent ${relativeTime(a.emailSentAt)}` : 'Email not delivered'}
+                  </p>
 
                   <div className="admin-record-actions" onClick={(e) => e.stopPropagation()}>
                     <button className="admin-action-btn delete" onClick={() => deleteApplication(a.id)}>
