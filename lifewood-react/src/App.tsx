@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState, useEffect, useMemo, type FC } from 'react';
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
@@ -83,6 +83,7 @@ const AppInner: FC = () => {
   const isTouchDevice = useIsTouchDevice();
   const isLightPage = useIsLightPage();
   const { pathname } = useLocation();
+  const navigate = useNavigate();
   const isAdminSection = pathname.startsWith('/admin') && pathname !== '/admin/login';
 
   /* ── Smooth scroll (Lenis) — skip on light pages ── */
@@ -90,6 +91,27 @@ const AppInner: FC = () => {
 
   /* ── Legacy effects engine — skip on admin/legal pages ── */
   useLegacyEffects(isLightPage);
+
+  /* ── Secret code listener: type "lifewood" to access admin login ── */
+  useEffect(() => {
+    let inputBuffer = '';
+    const secretCode = 'lifewood';
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      inputBuffer += e.key.toLowerCase();
+      if (inputBuffer.includes(secretCode)) {
+        inputBuffer = '';
+        navigate('/admin/login');
+      }
+      // Keep buffer size reasonable (last 20 chars)
+      if (inputBuffer.length > 20) {
+        inputBuffer = inputBuffer.slice(-20);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [navigate]);
 
   return (
     <>
