@@ -13,31 +13,29 @@ function buildReplyEmailHTML({ recipientName, subject, message }) {
   const firstName = recipientName.split(' ')[0];
 
   const bodyContent = `
-    <div style="font-family:'Segoe UI',Roboto,sans-serif;color:#2a2a2a;line-height:1.6;">
-      <p style="font-size:16px;margin:0 0 16px;">
-        Dear ${firstName},
-      </p>
-      
-      <p style="font-size:16px;margin:0 0 16px;">
-        Thank you for reaching out to us. We appreciate your message and are here to help!
-      </p>
+    <p style="font-size:15px;line-height:1.7;color:#333;margin:0 0 16px;">
+      Dear ${firstName},
+    </p>
+    
+    <p style="font-size:15px;line-height:1.7;color:#333;margin:0 0 16px;">
+      Thank you for reaching out to us. We appreciate your message!
+    </p>
 
-      <div style="background:#f5f5f5;border-left:4px solid #D4A017;border-radius:8px;padding:16px 20px;margin:24px 0;">
-        <p style="font-size:14px;font-weight:600;color:#1A3A2A;margin:0 0 8px;">
-          <strong>Re: ${subject || 'Your Message'}</strong>
-        </p>
-        <p style="font-size:14px;color:#2a2a2a;margin:0;white-space:pre-wrap;">${message}</p>
-      </div>
-
-      <p style="font-size:16px;margin:0 0 16px;">
-        If you have any further questions or concerns, please don't hesitate to reach out.
+    <div style="background:#f9f9f9;border-left:3px solid #D4A017;border-radius:6px;padding:16px 18px;margin:24px 0;">
+      <p style="font-size:13px;font-weight:600;color:#555;margin:0 0 8px;text-transform:uppercase;letter-spacing:0.3px;">
+        Re: ${subject || 'Your Message'}
       </p>
-
-      <p style="font-size:16px;margin:0 0 8px;">
-        Best regards,<br/>
-        <strong>Lifewood Data Technology Team</strong>
-      </p>
+      <p style="font-size:14px;line-height:1.8;color:#333;margin:0;white-space:pre-wrap;">${message}</p>
     </div>
+
+    <p style="font-size:15px;line-height:1.7;color:#333;margin:0 0 16px;">
+      If you have any further questions, please don't hesitate to reach out.
+    </p>
+
+    <p style="font-size:15px;margin:0 0 8px;">
+      Best regards,<br/>
+      <strong>The Lifewood Team</strong>
+    </p>
   `;
 
   return `
@@ -48,48 +46,34 @@ function buildReplyEmailHTML({ recipientName, subject, message }) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Response from Lifewood</title>
 </head>
-<body style="margin:0;padding:0;background:#f4f6f5;font-family:'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
-  <div style="max-width:600px;margin:0 auto;padding:40px 20px;">
+<body style="margin:0;padding:0;background:#f9f9f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sans-serif;color:#333;">
+  <div style="max-width:560px;margin:0 auto;padding:20px;">
 
-    <!-- Card -->
-    <div style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(26,58,42,0.08);">
+    <!-- Clean Card -->
+    <div style="background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
 
-      <!-- Header Banner with Logo -->
-      <div style="background:linear-gradient(135deg,#1A3A2A 0%,#0D2A1E 100%);padding:32px 40px;text-align:center;">
-        <!-- Logo -->
-        <img src="https://lifewoodwebsite.com/lifewood%20official%20logo/use%20this.png" alt="Lifewood Logo" style="max-width:200px;height:auto;margin:0 auto 20px;display:block;" />
-        <h1 style="margin:0 0 8px;font-size:22px;font-weight:800;color:#F5F1EB;letter-spacing:0.5px;">
-          LIFEWOOD
-        </h1>
-        <p style="margin:0;font-size:13px;color:rgba(245,241,235,0.6);letter-spacing:1px;text-transform:uppercase;">
-          Data Technology
-        </p>
+      <!-- Header with Logo Only -->
+      <div style="padding:48px 30px 40px;text-align:center;border-bottom:1px solid #f0f0f0;">
+        <img src="https://lifewoodwebsite.com/lifewood%20official%20logo/use%20this.png" alt="Lifewood" style="max-width:240px;height:auto;display:block;margin:0 auto;" />
       </div>
 
       <!-- Body Content -->
-      <div style="padding:24px 40px 32px;">
+      <div style="padding:32px 30px;">
         ${bodyContent}
       </div>
 
       <!-- Footer -->
-      <div style="padding:24px 40px;text-align:center;border-top:1px solid #eee;">
-        <p style="margin:0 0 8px;font-size:14px;font-weight:600;color:#1A3A2A;">
-          Lifewood Data Technology
+      <div style="padding:24px 30px;text-align:center;border-top:1px solid #f0f0f0;background:#fafafa;font-size:12px;">
+        <p style="margin:0 0 8px;">
+          <a href="mailto:support@lifewood.com" style="color:#D4A017;text-decoration:none;font-weight:600;">support@lifewood.com</a>
+          &nbsp;•&nbsp;
+          <a href="https://lifewoodwebsite.com" style="color:#D4A017;text-decoration:none;font-weight:600;">lifewoodwebsite.com</a>
         </p>
-        <p style="margin:0;font-size:12px;color:#999;line-height:1.6;">
-          Empowering businesses with AI-powered data solutions across 30+ countries.
-          <br />
-          <a href="mailto:support@lifewood.com" style="color:#D4A017;text-decoration:none;">support@lifewood.com</a>
-          &nbsp;&middot;&nbsp;
-          <a href="https://lifewoodwebsite.com" style="color:#D4A017;text-decoration:none;">lifewoodwebsite.com</a>
+        <p style="margin:0;color:#999;font-size:11px;">
+          This is an automated email from Lifewood.
         </p>
       </div>
     </div>
-
-    <!-- Legal -->
-    <p style="text-align:center;font-size:11px;color:#aaa;margin:20px 0 0;line-height:1.6;">
-      This is an automated email from Lifewood. Please do not reply directly to this email.
-    </p>
   </div>
 </body>
 </html>
