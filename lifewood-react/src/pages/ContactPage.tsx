@@ -108,7 +108,12 @@ const ContactPage: FC = () => {
   };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const phone = e.currentTarget.value.trim();
+    // Only allow digits, +, spaces, parentheses, and hyphens
+    const input = e.currentTarget.value;
+    const filtered = input.replace(/[^0-9+\s()\-]/g, '');
+    e.currentTarget.value = filtered;
+    
+    const phone = filtered.trim();
     if (phone && !isValidPhone(phone)) {
       setErrors((prev) => ({
         ...prev,
@@ -208,6 +213,7 @@ const ContactPage: FC = () => {
                   id="ct-phone"
                   name="phone"
                   autoComplete="tel"
+                  inputMode="numeric"
                   aria-invalid={!!errors.phone}
                   aria-describedby={errors.phone ? 'ct-phone-err' : undefined}
                   onChange={handlePhoneChange}

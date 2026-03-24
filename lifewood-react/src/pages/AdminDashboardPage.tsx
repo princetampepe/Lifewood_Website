@@ -4,6 +4,7 @@ import {
   collection, onSnapshot, addDoc, updateDoc, deleteDoc,
   doc, serverTimestamp, orderBy, query, type Timestamp,
 } from 'firebase/firestore';
+import { type User } from 'firebase/auth';
 import { firestore } from '../firebase';
 import { useAuth } from '../hooks/useAuth';
 import { positions } from '../data/siteData';
@@ -106,13 +107,66 @@ const ConfirmModal: FC<ConfirmState & { onCancel: () => void }> = ({
 };
 
 /* ================================================================
+   PROFILE MODAL
+   ================================================================ */
+const ProfileModal: FC<{ user: User | null; onClose: () => void }> = ({ user, onClose }) => {
+  useEffect(() => {
+    const fn = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', fn);
+    return () => window.removeEventListener('keydown', fn);
+  }, [onClose]);
+
+  return (
+    <div className="admin-modal-overlay" onClick={onClose}>
+      <div className="admin-profile-modal" onClick={(e) => e.stopPropagation()}>
+        <button className="admin-modal-close" onClick={onClose}><i className="fas fa-times" /></button>
+        
+        <div className="admin-profile-header">
+          <Avatar name={user?.displayName || user?.email || 'Admin'} size={80} />
+          <div className="admin-profile-info">
+            <h2>{user?.displayName || 'Admin User'}</h2>
+            <p className="admin-profile-email">{user?.email}</p>
+          </div>
+        </div>
+
+        <div className="admin-profile-details">
+          <div className="admin-profile-field">
+            <label><i className="fas fa-envelope" /> Email</label>
+            <p>{user?.email}</p>
+          </div>
+          {user?.displayName && (
+            <div className="admin-profile-field">
+              <label><i className="fas fa-user" /> Display Name</label>
+              <p>{user.displayName}</p>
+            </div>
+          )}
+          <div className="admin-profile-field">
+            <label><i className="fas fa-key" /> Account Status</label>
+            <p><span className="admin-profile-badge">Administrator</span></p>
+          </div>
+          {user?.emailVerified && (
+            <div className="admin-profile-field">
+              <label><i className="fas fa-check-circle" /> Email Verified</label>
+              <p><span className="admin-profile-badge verified">Yes</span></p>
+            </div>
+          )}
+        </div>
+
+        <button className="admin-profile-close-btn" onClick={onClose}>Close</button>
+      </div>
+    </div>
+  );
+};
+
+/* ================================================================
    ADMIN DASHBOARD
    ================================================================ */
 const AdminDashboardPage: FC = () => {
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
 
   const [section, setSection] = useState<'contacts' | 'applications'>('contacts');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
 
   const [contacts, setContacts] = useState<ContactMessage[]>([]);
   const [contactsLoading, setContactsLoading] = useState(true);
@@ -320,6 +374,10 @@ const AdminDashboardPage: FC = () => {
         </nav>
 
         <div className="admin-sidebar-footer">
+          <button className="admin-profile-btn" onClick={() => setShowProfile(true)} title="View Profile">
+            <Avatar name={user?.displayName || user?.email || 'Admin'} size={36} />
+            <span>{user?.email?.split('@')[0] || 'Admin'}</span>
+          </button>
           <button className="admin-logout-btn" onClick={logout}>
             <i className="fas fa-sign-out-alt" /> Logout
           </button>
@@ -349,6 +407,47 @@ const AdminDashboardPage: FC = () => {
             ) : (
               <span className="admin-topbar-stat total">{contacts.length} total</span>
             )}
+          </div>
+        </div>
+
+        {/* ── Dashboard Overview ── */}
+        <div className="admin-overview">
+          <div className="admin-stats-grid">
+            <div className="admin-stat-card">
+              <div className="admin-stat-header">
+                <h3>Total Messages</h3>
+                <i className="fas fa-envelope"></i>
+              </div>
+              <p className="admin-stat-value">{contacts.length}</p>
+              <p className="admin-stat-label">Contact inquiries</p>
+            </div>
+
+            <div className="admin-stat-card">
+              <div className="admin-stat-header">
+                <h3>Job Applications</h3>
+                <i className="fas fa-briefcase"></i>
+              </div>
+              <p className="admin-stat-value">{applications.length}</p>
+              <p className="admin-stat-label">{statusCounts.pending} pending</p>
+            </div>
+
+            <div className="admin-stat-card">
+              <div className="admin-stat-header">
+                <h3>Approved</h3>
+                <i className="fas fa-check-circle"></i>
+              </div>
+              <p className="admin-stat-value">{statusCounts.accepted}</p>
+              <p className="admin-stat-label">Accepted applications</p>
+            </div>
+
+            <div className="admin-stat-card">
+              <div className="admin-stat-header">
+                <h3>Rejected</h3>
+                <i className="fas fa-times-circle"></i>
+              </div>
+              <p className="admin-stat-value">{statusCounts.rejected}</p>
+              <p className="admin-stat-label">Not selected</p>
+            </div>
           </div>
         </div>
 
@@ -506,6 +605,9 @@ const AdminDashboardPage: FC = () => {
       {/* ── Confirm Modal ── */}
       {confirmState && <ConfirmModal {...confirmState} onCancel={() => setConfirmState(null)} />}
 
+      {/* ── Profile Modal ── */}
+      {showProfile && <ProfileModal user={user} onClose={() => setShowProfile(false)} />}
+
       {/* ── Modals ── */}
       {modal && (
         <div className="admin-modal-overlay" onClick={() => setModal(null)}>
@@ -644,7 +746,10 @@ const ContactReplyForm: FC<{ data: ContactMessage; onDone: () => void }> = ({ da
     setSending(true);
     setError('');
     try {
-      const response = await fetch('/api/send-reply', {
+      // Use Vercel API endpoint (or fallback to local in dev)
+      const apiUrl = import.meta.env.PROD ? '/api/send-reply' : 'https://lifewood-website-sandy.vercel.app/api/send-reply';
+      
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -656,7 +761,17 @@ const ContactReplyForm: FC<{ data: ContactMessage; onDone: () => void }> = ({ da
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        let errorData: any = {};
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          try {
+            errorData = await response.json();
+          } catch {
+            errorData = { error: `Server error: ${response.statusText}` };
+          }
+        } else {
+          errorData = { error: `Server error (${response.status}): ${response.statusText}` };
+        }
         throw new Error(errorData.error || 'Failed to send email.');
       }
 

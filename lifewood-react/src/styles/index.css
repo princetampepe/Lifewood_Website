@@ -2815,6 +2815,91 @@ textarea:focus-visible,
 }
 .admin-logout-btn:hover { border-color: #e74c3c; color: #e74c3c; background: rgba(231,76,60,0.08); }
 
+/* Profile Button */
+.admin-profile-btn {
+  display: flex; align-items: center; gap: 0.75rem;
+  width: 100%; background: none;
+  border: 1.5px solid rgba(255,255,255,0.15);
+  border-radius: 10px; padding: 0.5rem 0.75rem;
+  font-family: inherit; font-weight: 600; font-size: 0.85rem;
+  color: rgba(255,255,255,0.7); cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+  margin-bottom: 0.75rem;
+}
+.admin-profile-btn:hover { border-color: #D4A017; color: #D4A017; background: rgba(212,160,23,0.08); }
+.admin-profile-btn span { flex: 1; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Profile Modal */
+.admin-profile-modal {
+  position: relative; background: white; border-radius: 16px;
+  padding: 2rem; max-width: 500px; width: 90vw;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  animation: slideUp 0.3s ease-out;
+}
+
+.admin-modal-close {
+  position: absolute; top: 1rem; right: 1rem;
+  background: none; border: none; font-size: 1.5rem;
+  color: #999; cursor: pointer; padding: 0.25rem;
+  transition: color 0.2s;
+}
+.admin-modal-close:hover { color: #333; }
+
+.admin-profile-header {
+  display: flex; align-items: center; gap: 1.5rem;
+  margin-bottom: 2rem; padding-bottom: 1.5rem;
+  border-bottom: 1px solid #eee;
+}
+.admin-profile-info h2 {
+  font-size: 1.3rem; color: #1A3A2A;
+  margin: 0 0 0.3rem;
+}
+.admin-profile-email {
+  font-size: 0.85rem; color: #666; margin: 0;
+}
+
+.admin-profile-details {
+  display: flex; flex-direction: column; gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+.admin-profile-field {
+  display: flex; flex-direction: column; gap: 0.5rem;
+}
+.admin-profile-field label {
+  font-size: 0.85rem; font-weight: 700;
+  color: #1A3A2A; display: flex; align-items: center; gap: 0.5rem;
+}
+.admin-profile-field label i { color: #D4A017; }
+.admin-profile-field p {
+  font-size: 0.9rem; color: #333; margin: 0;
+  padding: 0.5rem 1rem; background: #f5f5f5;
+  border-radius: 8px;
+}
+
+.admin-profile-badge {
+  display: inline-block; background: #1A3A2A;
+  color: white; padding: 0.25rem 0.75rem;
+  border-radius: 12px; font-size: 0.8rem; font-weight: 700;
+}
+.admin-profile-badge.verified {
+  background: #27ae60;
+}
+
+.admin-profile-close-btn {
+  width: 100%; padding: 0.75rem 1rem;
+  background: #1A3A2A; color: white;
+  border: none; border-radius: 10px;
+  font-weight: 700; cursor: pointer;
+  font-size: 0.9rem;
+  transition: background 0.2s;
+}
+.admin-profile-close-btn:hover { background: #0f251c; }
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* Mobile overlay */
 .admin-sidebar-overlay {
   display: none; position: fixed; inset: 0;
@@ -2831,15 +2916,17 @@ textarea:focus-visible,
   flex: 1; margin-left: 260px;
   display: flex; flex-direction: column;
   min-height: 100vh;
+  background: #f8f8f8;
 }
 
 /* ── Topbar ── */
 .admin-topbar {
   position: sticky; top: 0; z-index: 100;
-  background: rgba(244,246,245,0.95); backdrop-filter: blur(8px);
-  border-bottom: 1px solid rgba(26,58,42,0.08);
+  background: rgba(255,255,255,0.98); backdrop-filter: blur(8px);
+  border-bottom: 1px solid #e8e8e8;
   display: flex; align-items: center; gap: 1rem;
   padding: 1rem 1.5rem; flex-wrap: wrap;
+  box-shadow: 0 1px 3px rgba(26,58,42,0.05);
 }
 .admin-topbar-title {
   font-size: 1.3rem; font-weight: 700; color: var(--dark-serpent); margin: 0; flex: 1;
@@ -2853,6 +2940,49 @@ textarea:focus-visible,
 .admin-topbar-stat.accepted { background: rgba(39,174,96,0.1); color: #1e8449; }
 .admin-topbar-stat.rejected { background: rgba(231,76,60,0.08); color: #c0392b; }
 .admin-topbar-stat.total { background: rgba(26,58,42,0.08); color: var(--dark-serpent); }
+
+/* ── Dashboard Overview ── */
+.admin-overview {
+  padding: 1.5rem; margin-bottom: 0.5rem;
+}
+.admin-stats-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+.admin-stat-card {
+  background: #fff; border: 1px solid #e8e8e8;
+  border-radius: 12px; padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(26,58,42,0.05);
+  transition: all 0.3s ease;
+  position: relative;
+}
+.admin-stat-card:hover {
+  border-color: var(--saffron);
+  box-shadow: 0 4px 12px rgba(212,160,23,0.1);
+  transform: translateY(-2px);
+}
+.admin-stat-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 1rem;
+}
+.admin-stat-card h3 {
+  font-size: 0.85rem; font-weight: 600;
+  color: var(--castletone); margin: 0; text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.admin-stat-card i {
+  font-size: 1.5rem; color: var(--saffron);
+  opacity: 0.7;
+}
+.admin-stat-value {
+  font-size: 2rem; font-weight: 700;
+  color: var(--dark-serpent); margin: 0.5rem 0 0.3rem 0;
+  line-height: 1;
+}
+.admin-stat-label {
+  font-size: 0.8rem; color: var(--castletone);
+  margin: 0;
+}
 
 /* ── Section ── */
 .admin-section { padding: 1.5rem; }
@@ -2904,14 +3034,16 @@ textarea:focus-visible,
   gap: 1rem;
 }
 .admin-record-card {
-  background: #fff; border-radius: 16px; padding: 1.3rem 1.4rem;
-  box-shadow: 0 2px 12px rgba(26,58,42,0.06);
-  border: 1px solid var(--dark-serpent-10);
-  transition: box-shadow 0.25s, transform 0.25s;
+  background: #ffffff; border-radius: 12px; padding: 1.4rem;
+  box-shadow: 0 1px 3px rgba(26,58,42,0.08);
+  border: 1px solid #f0f0f0;
+  transition: all 0.3s ease;
   cursor: pointer; min-width: 0;
 }
 .admin-record-card:hover {
-  box-shadow: 0 8px 32px rgba(26,58,42,0.12); transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(212,160,23,0.12);
+  border-color: rgba(212,160,23,0.2);
+  transform: translateY(-2px);
 }
 
 /* Card Header: avatar + name + date */
@@ -3008,9 +3140,9 @@ textarea:focus-visible,
 .app-status-badge i { font-size: 0.65rem; }
 
 /* Left border by status */
-.admin-record-card.app-status-pending { border-left: 3px solid #D4A017; }
-.admin-record-card.app-status-accepted { border-left: 3px solid #27ae60; }
-.admin-record-card.app-status-rejected { border-left: 3px solid #e74c3c; }
+.admin-record-card.app-status-pending { border-left: 5px solid #D4A017; }
+.admin-record-card.app-status-accepted { border-left: 5px solid #27ae60; }
+.admin-record-card.app-status-rejected { border-left: 5px solid #e74c3c; }
 
 /* ── Status Filter Pills ── */
 .admin-status-filters {
@@ -3107,7 +3239,7 @@ textarea:focus-visible,
 .admin-detail-field p { margin: 0; font-size: 0.9rem; color: var(--dark-serpent); word-break: break-word; }
 .admin-detail-message {
   font-size: 0.88rem; line-height: 1.7; color: #333;
-  background: #f8f9f8; border-radius: 10px; padding: 1rem;
+  background: #fafafa; border: 1px solid #f0f0f0; border-radius: 10px; padding: 1rem;
   white-space: pre-wrap; word-break: break-word;
 }
 .admin-file-link {
