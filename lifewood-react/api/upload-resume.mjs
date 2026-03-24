@@ -13,28 +13,16 @@ import { v2 as cloudinary } from 'cloudinary';
 import formidable from 'formidable';
 import fs from 'fs';
 
-// Configure Cloudinary
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
+// Configure Cloudinary - only once at startup
+const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+const apiKey = process.env.CLOUDINARY_API_KEY;
+const apiSecret = process.env.CLOUDINARY_API_SECRET;
 
-/**
- * Promise-based Cloudinary upload
- */
-function uploadToCloudinary(fileStream, options) {
-  return new Promise((resolve, reject) => {
-    const upload = cloudinary.uploader.upload_stream(options, (error, result) => {
-      if (error) {
-        reject(error);
-      } else {
-        resolve(result);
-      }
-    });
-
-    fileStream.pipe(upload);
-    fileStream.on('error', reject);
+if (cloudName && apiKey && apiSecret) {
+  cloudinary.config({
+    cloud_name: cloudName,
+    api_key: apiKey,
+    api_secret: apiSecret,
   });
 }
 
@@ -55,11 +43,16 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Validate environment variables
-    if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+    // Validate Cloudinary is configured
+    if (!cloudName || !apiKey || !apiSecret) {
+      console.error('Missing Cloudinary credentials:', {
+        cloudName: !!cloudName,
+        apiKey: !!apiKey,
+        apiSecret: !!apiSecret,
+      });
       return res.status(500).json({
-        error: 'Cloudinary credentials not configured',
-        details: 'Missing CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, or CLOUDINARY_API_SECRET',
+        error: 'Server configuration error',
+        details: 'Cloudinary credentials not configured',
       });
     }
 
@@ -67,9 +60,16 @@ export default async function handler(req, res) {
     const form = formidable({ multiples: false });
     const [fields, files] = await form.parse(req);
 
-    const file = files.file && files.file[0];
-    const applicantName = fields.applicantName && fields.applicantName[0];
-    const applicantEmail = fields.applicantEmail && fields.applicantEmail[0];
+    const file = files.file?.[0];
+    const applicantName = fields.applicantName?.[0];
+    const applicantEmail = fields.applicantEmail?.[0];
+
+    console.log('Upload request received:', {
+      fileName: file?.originalFilename,
+      fileSize: file?.size,
+      fileMime: file?.mimetype,
+      applicantEmail,
+    });
 
     // Validate file exists
     if (!file) {
@@ -90,43 +90,65 @@ export default async function handler(req, res) {
 
     if (!ALLOWED_TYPES.includes(file.mimetype)) {
       return res.status(400).json({
-        error: `Invalid file type. Allowed types: PDF, DOC, DOCX, JPG, PNG, GIF, TXT`,
+        error: `Invalid file type: ${file.mimetype}. Allowed types: PDF, DOC, DOCX, JPG, PNG, GIF, TXT`,
       });
     }
 
     if (file.size > MAX_FILE_SIZE) {
       return res.status(400).json({
-        error: `File size exceeds 10MB limit`,
+        error: `File size (${(file.size / 1024 / 1024).toFixed(2)}MB) exceeds 10MB limit`,
       });
     }
 
-    // Create read stream
-    const fileStream = fs.createReadStream(file.filepath);
-
     // Upload to Cloudinary with promise-based approach
-    const result = await uploadToCloudinary(fileStream, {
-      folder: `lifewood/resumes/${new Date().getFullYear()}`,
-      resource_type: 'auto',
-      public_id: `${applicantEmail}-${Date.now()}`,
-      metadata: {
-        applicant_name: applicantName,
-        applicant_email: applicantEmail,
-      },
+    const uploadResult = await new Promise((resolve, reject) => {
+      const fileStream = fs.createReadStream(file.filepath);
+      
+      const upload = cloudinary.uploader.upload_stream(
+        {
+          folder: `lifewood/resumes/${new Date().getFullYear()}`,
+          resource_type: 'auto',
+          public_id: `${applicantEmail}-${Date.now()}`,
+          metadata: {
+            applicant_name: applicantName,
+            applicant_email: applicantEmail,
+          },
+        },
+        (error, result) => {
+          if (error) {
+            console.error('Cloudinary upload error:', error);
+            reject(error);
+          } else {
+            console.log('Cloudinary upload success:', {
+              publicId: result.public_id,
+              url: result.secure_url,
+            });
+            resolve(result);
+          }
+        }
+      );
+
+      fileStream.on('error', (error) => {
+        console.error('File stream error:', error);
+        reject(error);
+      });
+
+      fileStream.pipe(upload);
     });
 
-    // Return success with URL
+    // Return success
     return res.status(200).json({
       success: true,
-      url: result.secure_url,
-      publicId: result.public_id,
-      fileSize: result.bytes,
+      url: uploadResult.secure_url,
+      publicId: uploadResult.public_id,
+      fileSize: uploadResult.bytes,
       uploadedAt: new Date().toISOString(),
     });
   } catch (error) {
     console.error('Upload handler error:', error);
     return res.status(500).json({
       error: 'Failed to upload file',
-      details: error instanceof Error ? error.message : 'Unknown error',
+      details: error instanceof Error ? error.message : String(error),
     });
   }
 }
