@@ -107,8 +107,10 @@ function buildEmailHTML({ applicantName, position, status, applicationDate }) {
     <!-- Card -->
     <div style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(26,58,42,0.08);">
 
-      <!-- Header Banner -->
+      <!-- Header Banner with Logo -->
       <div style="background:linear-gradient(135deg,#1A3A2A 0%,#0D2A1E 100%);padding:32px 40px;text-align:center;">
+        <!-- Logo -->
+        <img src="https://lifewoodwebsite.com/lifewood%20official%20logo/use%20this.png" alt="Lifewood Logo" style="max-width:200px;height:auto;margin:0 auto 20px;display:block;" />
         <h1 style="margin:0 0 8px;font-size:22px;font-weight:800;color:#F5F1EB;letter-spacing:0.5px;">
           LIFEWOOD
         </h1>
