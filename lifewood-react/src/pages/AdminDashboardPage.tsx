@@ -252,7 +252,8 @@ const AdminDashboardPage: FC = () => {
 
   const filteredApps = useMemo(() => {
     let result = applications;
-    if (appStatusFilter !== 'all') result = result.filter((a) => a.status === appStatusFilter);
+    // Only show pending applications in the Job Applications section
+    result = result.filter((a) => a.status === 'pending');
     if (appSearch.trim()) {
       const q = appSearch.toLowerCase();
       result = result.filter((a) =>
@@ -261,7 +262,7 @@ const AdminDashboardPage: FC = () => {
       );
     }
     return appSort === 'oldest' ? [...result].reverse() : result;
-  }, [applications, appSearch, appStatusFilter, appSort]);
+  }, [applications, appSearch, appSort]);
 
   const statusCounts = useMemo(() => {
     const counts = { pending: 0, accepted: 0, rejected: 0 };
@@ -567,13 +568,6 @@ const AdminDashboardPage: FC = () => {
               <button className="admin-create-btn" onClick={() => setModal({ type: 'create-app' })} style={{ display: 'none' }}>
                 <i className="fas fa-plus" /> New
               </button>
-            </div>
-
-            <div className="admin-status-filters">
-              <button className={`admin-status-pill ${appStatusFilter === 'all' ? 'active' : ''}`} onClick={() => setAppStatusFilter('all')}>All ({applications.length})</button>
-              <button className={`admin-status-pill pending ${appStatusFilter === 'pending' ? 'active' : ''}`} onClick={() => setAppStatusFilter('pending')}><i className="fas fa-clock" /> Pending ({statusCounts.pending})</button>
-              <button className={`admin-status-pill accepted ${appStatusFilter === 'accepted' ? 'active' : ''}`} onClick={() => setAppStatusFilter('accepted')}><i className="fas fa-check-circle" /> Accepted ({statusCounts.accepted})</button>
-              <button className={`admin-status-pill rejected ${appStatusFilter === 'rejected' ? 'active' : ''}`} onClick={() => setAppStatusFilter('rejected')}><i className="fas fa-times-circle" /> Rejected ({statusCounts.rejected})</button>
             </div>
 
             {appsLoading && <div className="admin-loading"><div className="page-loader-spinner" /> Loading…</div>}
