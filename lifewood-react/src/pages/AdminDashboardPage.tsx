@@ -226,7 +226,7 @@ const AdminDashboardPage: FC = () => {
           return {
             id: d.id, fullName: data.fullName ?? '', email: data.email ?? '',
             phone: data.phone ?? '', position: data.position ?? '',
-            coverLetter: data.coverLetter ?? '', status: data.status ?? 'pending',
+            coverLetter: data.coverLetter ?? '', resumeUrl: data.resumeUrl ?? undefined, status: data.status ?? 'pending',
             statusUpdatedAt: data.statusUpdatedAt ?? null,
             emailSentAt: data.emailSentAt ?? null, createdAt: data.createdAt ?? null,
           } as JobApplication;
