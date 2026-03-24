@@ -132,10 +132,6 @@ export default async function handler(req, res) {
               folder: `lifewood/resumes/${new Date().getFullYear()}`,
               resource_type: 'auto',
               public_id: `${applicantEmail}-${Date.now()}`,
-              metadata: {
-                applicant_name: applicantName,
-                applicant_email: applicantEmail,
-              },
             },
             (error, result) => {
               if (error) {
