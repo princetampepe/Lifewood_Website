@@ -49,6 +49,12 @@ export default async function handler(req, res) {
       });
     }
 
+    console.log('[Upload] Cloudinary config loaded:', {
+      cloud_name: cloudName,
+      api_key: apiKey.substring(0, 5) + '...',
+      api_secret: apiSecret.substring(0, 5) + '...',
+    });
+
     return new Promise((resolve) => {
       let applicantName = '';
       let applicantEmail = '';
@@ -133,11 +139,18 @@ export default async function handler(req, res) {
             },
             (error, result) => {
               if (error) {
-                console.error('[Upload] Cloudinary error:', error.message);
+                console.error('[Upload] Cloudinary error:', {
+                  message: error.message,
+                  code: error.code,
+                  status: error.status,
+                  http_code: error.http_code,
+                  full: error.toString(),
+                });
                 return resolve(
                   res.status(500).json({
                     error: 'Upload to Cloudinary failed',
                     details: error.message,
+                    code: error.code,
                   })
                 );
               }
