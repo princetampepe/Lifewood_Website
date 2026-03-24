@@ -78,7 +78,7 @@ const CareersPage: FC = () => {
   };
 
   const handleFileUpload = async (file: File, applicantName: string, applicantEmail: string) => {
-    if (!file) return;
+    if (!file) return { success: true, url: '' };
 
     // Validate file size
     const MAX_SIZE = 10 * 1024 * 1024; // 10MB
@@ -87,7 +87,7 @@ const CareersPage: FC = () => {
         type: 'error',
         msg: 'File size exceeds 10MB limit. Please choose a smaller file.',
       });
-      return;
+      return { success: false, url: null };
     }
 
     // Validate file type
@@ -106,7 +106,7 @@ const CareersPage: FC = () => {
         type: 'error',
         msg: 'Invalid file type. Please upload: PDF, DOC, DOCX, JPG, PNG, GIF, or TXT.',
       });
-      return;
+      return { success: false, url: null };
     }
 
     setIsUploading(true);
@@ -128,14 +128,16 @@ const CareersPage: FC = () => {
 
       const data = await response.json();
       setResumeUrl(data.url);
-      return data.url;
+      setFormStatus(null);
+      return { success: true, url: data.url };
     } catch (error) {
       console.error('Upload error:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
       setFormStatus({
         type: 'error',
-        msg: `Upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        msg: `Resume upload failed: ${errorMsg}. Application NOT submitted.`,
       });
-      return null;
+      return { success: false, url: null };
     } finally {
       setIsUploading(false);
     }
@@ -186,7 +188,15 @@ const CareersPage: FC = () => {
       // Upload resume if provided
       let uploadedResumeUrl = '';
       if (resumeFile) {
-        uploadedResumeUrl = await handleFileUpload(resumeFile, fullName, email) || '';
+        const uploadResult = await handleFileUpload(resumeFile, fullName, email);
+        
+        // If upload failed, don't proceed with form submission
+        if (!uploadResult.success) {
+          setIsSubmitting(false);
+          return;
+        }
+        
+        uploadedResumeUrl = uploadResult.url || '';
       }
 
       // Add job application to Firestore
