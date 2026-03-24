@@ -376,6 +376,16 @@ const AdminDashboardPage: FC = () => {
 
   const navTo = (s: 'contacts' | 'applications' | 'accepted' | 'rejected') => { setSection(s); setSidebarOpen(false); };
 
+  const handleLogout = () => {
+    askConfirm({
+      title: 'Logout',
+      message: 'Are you sure you want to logout?',
+      confirmLabel: 'Yes, Logout',
+      danger: false,
+      onConfirm: logout,
+    });
+  };
+
   /* ── Render ── */
   return (
     <div className="admin-layout">
@@ -422,7 +432,7 @@ const AdminDashboardPage: FC = () => {
             <Avatar name={user?.displayName || user?.email || 'Admin'} size={36} />
             <span>{user?.email?.split('@')[0] || 'Admin'}</span>
           </button>
-          <button className="admin-logout-btn" onClick={logout}>
+          <button className="admin-logout-btn" onClick={handleLogout}>
             <i className="fas fa-sign-out-alt" /> Logout
           </button>
         </div>
