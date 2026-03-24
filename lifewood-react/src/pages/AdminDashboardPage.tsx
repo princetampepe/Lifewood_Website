@@ -189,7 +189,7 @@ const AdminDashboardPage: FC = () => {
     | { type: 'reply-contact'; data: ContactMessage }
     | { type: 'create-app' }
     | { type: 'view-app'; data: JobApplication }
-    | { type: 'review-app'; data: JobApplication }
+    | { type: 'review-app'; data: JobApplication; reviewStatus: 'accepted' | 'rejected' }
     | null
   >(null);
 
@@ -314,7 +314,7 @@ const AdminDashboardPage: FC = () => {
 
   /* ── Accept / Reject ── */
   const updateApplicationStatus = useCallback((app: JobApplication, newStatus: 'accepted' | 'rejected') => {
-    setModal({ type: 'review-app', data: { ...app, _reviewStatus: newStatus as any } });
+    setModal({ type: 'review-app', data: app, reviewStatus: newStatus });
   }, []);
 
   const confirmApplicationStatus = useCallback(async (app: JobApplication, newStatus: 'accepted' | 'rejected') => {
@@ -704,7 +704,7 @@ const AdminDashboardPage: FC = () => {
               <AppDetailView data={modal.data} />
             )}
             {modal.type === 'review-app' && (
-              <ApplicationReviewDialog data={modal.data} onConfirm={confirmApplicationStatus} onCancel={() => setModal(null)} />
+              <ApplicationReviewDialog data={modal.data} reviewStatus={modal.reviewStatus} onConfirm={confirmApplicationStatus} onCancel={() => setModal(null)} />
             )}
             {modal.type === 'create-contact' && (
               <ContactForm onDone={() => setModal(null)} />
@@ -813,8 +813,7 @@ const AppDetailView: FC<{ data: JobApplication }> = ({ data }) => (
 /* ================================================================
    APPLICATION REVIEW DIALOG
    ================================================================ */
-const ApplicationReviewDialog: FC<{ data: any; onConfirm: (data: JobApplication, status: 'accepted' | 'rejected') => void; onCancel: () => void }> = ({ data, onConfirm, onCancel }) => {
-  const reviewStatus = (data as any)._reviewStatus as 'accepted' | 'rejected';
+const ApplicationReviewDialog: FC<{ data: JobApplication; reviewStatus: 'accepted' | 'rejected'; onConfirm: (data: JobApplication, status: 'accepted' | 'rejected') => void; onCancel: () => void }> = ({ data, reviewStatus, onConfirm, onCancel }) => {
   const isAccepting = reviewStatus === 'accepted';
   const posTitle = getPositionTitle(data.position);
   const [confirming, setConfirming] = useState(false);
