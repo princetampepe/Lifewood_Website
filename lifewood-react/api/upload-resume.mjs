@@ -1,7 +1,7 @@
 /**
  * Vercel Serverless Function — /api/upload-resume
  * Handles resume/CV file uploads to Cloudinary.
- * Requires VITE_CLOUDINARY_CLOUD_NAME and VITE_CLOUDINARY_UPLOAD_PRESET in env vars.
+ * Requires CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET in env vars.
  *
  * Expected POST body (multipart/form-data):
  *   - file: File object (PDF, DOC, DOCX, images, TXT)
@@ -20,6 +20,24 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+/**
+ * Promise-based Cloudinary upload
+ */
+function uploadToCloudinary(fileStream, options) {
+  return new Promise((resolve, reject) => {
+    const upload = cloudinary.uploader.upload_stream(options, (error, result) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve(result);
+      }
+    });
+
+    fileStream.pipe(upload);
+    fileStream.on('error', reject);
+  });
+}
+
 export default async function handler(req, res) {
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -37,6 +55,14 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Validate environment variables
+    if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+      return res.status(500).json({
+        error: 'Cloudinary credentials not configured',
+        details: 'Missing CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, or CLOUDINARY_API_SECRET',
+      });
+    }
+
     // Parse multipart form data
     const form = formidable({ multiples: false });
     const [fields, files] = await form.parse(req);
@@ -74,54 +100,33 @@ export default async function handler(req, res) {
       });
     }
 
-    // Upload to Cloudinary
-    const uploadStream = cloudinary.uploader.upload_stream(
-      {
-        folder: `lifewood/resumes/${new Date().getFullYear()}`,
-        resource_type: 'auto',
-        public_id: `${applicantEmail}-${Date.now()}`,
-        metadata: {
-          applicant_name: applicantName,
-          applicant_email: applicantEmail,
-        },
-      },
-      (error, result) => {
-        if (error) {
-          console.error('Cloudinary upload error:', error);
-          return res.status(500).json({
-            error: 'Failed to upload file to Cloudinary',
-            details: error.message,
-          });
-        }
-
-        // Return the secure URL
-        res.status(200).json({
-          success: true,
-          url: result.secure_url,
-          publicId: result.public_id,
-          fileSize: result.bytes,
-          uploadedAt: new Date().toISOString(),
-        });
-      }
-    );
-
-    // Pipe file to upload stream
+    // Create read stream
     const fileStream = fs.createReadStream(file.filepath);
-    fileStream.pipe(uploadStream);
 
-    // Error handling for file stream
-    fileStream.on('error', (error) => {
-      console.error('File stream error:', error);
-      return res.status(500).json({
-        error: 'Error reading file',
-        details: error.message,
-      });
+    // Upload to Cloudinary with promise-based approach
+    const result = await uploadToCloudinary(fileStream, {
+      folder: `lifewood/resumes/${new Date().getFullYear()}`,
+      resource_type: 'auto',
+      public_id: `${applicantEmail}-${Date.now()}`,
+      metadata: {
+        applicant_name: applicantName,
+        applicant_email: applicantEmail,
+      },
+    });
+
+    // Return success with URL
+    return res.status(200).json({
+      success: true,
+      url: result.secure_url,
+      publicId: result.public_id,
+      fileSize: result.bytes,
+      uploadedAt: new Date().toISOString(),
     });
   } catch (error) {
     console.error('Upload handler error:', error);
     return res.status(500).json({
-      error: 'Internal server error',
-      details: error.message,
+      error: 'Failed to upload file',
+      details: error instanceof Error ? error.message : 'Unknown error',
     });
   }
 }
