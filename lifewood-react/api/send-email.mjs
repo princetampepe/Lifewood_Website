@@ -132,18 +132,18 @@ function buildEmailHTML({ applicantName, position, status, applicationDate }) {
 
       <!-- Application Details -->
       <div style="background:#faf9f7;padding:20px 40px;border-top:1px solid #eee;">
-        <table style="width:100%;font-size:13px;color:#555;" cellpadding="0" cellspacing="0">
+        <table style="width:100%;font-size:14px;color:#1A3A2A;" cellpadding="0" cellspacing="0">
           <tr>
-            <td style="padding:4px 0;font-weight:600;color:#1A3A2A;">Position:</td>
-            <td style="padding:4px 0;text-align:right;">${position}</td>
+            <td style="padding:8px 0;font-weight:600;">Position:</td>
+            <td style="padding:8px 0;text-align:right;color:#2a2a2a;">${position}</td>
           </tr>
           <tr>
-            <td style="padding:4px 0;font-weight:600;color:#1A3A2A;">Applied:</td>
-            <td style="padding:4px 0;text-align:right;">${dateStr}</td>
+            <td style="padding:8px 0;font-weight:600;">Applied:</td>
+            <td style="padding:8px 0;text-align:right;color:#2a2a2a;">${dateStr}</td>
           </tr>
           <tr>
-            <td style="padding:4px 0;font-weight:600;color:#1A3A2A;">Status:</td>
-            <td style="padding:4px 0;text-align:right;">
+            <td style="padding:8px 0;font-weight:600;">Status:</td>
+            <td style="padding:8px 0;text-align:right;">
               <span style="color:${badgeColor};font-weight:700;">
                 ${isAccepted ? 'Accepted' : 'Not Selected'}
               </span>
