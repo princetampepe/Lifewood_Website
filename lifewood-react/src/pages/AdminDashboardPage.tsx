@@ -968,22 +968,24 @@ const ApplicationReviewDialog: FC<{ data: JobApplication; reviewStatus: 'accepte
         <div className="admin-detail-field" style={{ marginTop: '1rem' }}>
           <label><i className="fas fa-file" /> Resume / CV</label>
           <div style={{ display: 'flex', gap: '12px', marginTop: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
-            <a href={data.resumeUrl} target="_blank" rel="noopener noreferrer" className="admin-file-link">
+            <a href={data.resumeUrl} target="_blank" rel="noopener noreferrer" className="admin-file-link" download>
               <i className="fas fa-download" /> Download
             </a>
             <a href={data.resumeUrl} target="_blank" rel="noopener noreferrer" className="admin-file-link" style={{ background: 'var(--dark-serpent)' }}>
-              <i className="fas fa-eye" /> View
+              <i className="fas fa-eye" /> View in New Tab
             </a>
           </div>
           {data.resumeUrl.toLowerCase().includes('.pdf') && (
-            <iframe 
-              src={`${data.resumeUrl}#toolbar=0`}
-              style={{ width: '100%', height: '500px', border: '1px solid #ddd', borderRadius: '8px', marginTop: '8px' }}
-              title="Resume PDF Viewer"
-            />
+            <div style={{ marginTop: '8px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #ddd', background: '#f5f5f5' }}>
+              <iframe 
+                src={data.resumeUrl}
+                style={{ width: '100%', height: '500px', border: 'none' }}
+                title="Resume PDF Viewer"
+              />
+            </div>
           )}
           {(data.resumeUrl.toLowerCase().includes('.jpg') || data.resumeUrl.toLowerCase().includes('.png') || data.resumeUrl.toLowerCase().includes('.gif') || data.resumeUrl.toLowerCase().includes('.jpeg')) && (
-            <div style={{ marginTop: '8px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #ddd', maxHeight: '500px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ marginTop: '8px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #ddd', maxHeight: '500px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f5f5f5' }}>
               <img src={data.resumeUrl} alt="Resume" style={{ maxWidth: '100%', maxHeight: '500px', objectFit: 'contain' }} />
             </div>
           )}
