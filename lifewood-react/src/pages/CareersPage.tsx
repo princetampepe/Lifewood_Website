@@ -51,6 +51,8 @@ const CareersPage: FC = () => {
   const [formStatus, setFormStatus] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
   const [selectedFileName, setSelectedFileName] = useState('');
   const [selectedFileSize, setSelectedFileSize] = useState(0);
+  const [resumeUrl, setResumeUrl] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
 
   const filteredPositions = useMemo(() => {
     if (!searchTerm.trim()) return positions;
@@ -73,6 +75,70 @@ const CareersPage: FC = () => {
 
   const clearError = (field: keyof FormErrors) => {
     if (errors[field]) setErrors((prev) => ({ ...prev, [field]: undefined }));
+  };
+
+  const handleFileUpload = async (file: File, applicantName: string, applicantEmail: string) => {
+    if (!file) return;
+
+    // Validate file size
+    const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+    if (file.size > MAX_SIZE) {
+      setFormStatus({
+        type: 'error',
+        msg: 'File size exceeds 10MB limit. Please choose a smaller file.',
+      });
+      return;
+    }
+
+    // Validate file type
+    const ALLOWED_TYPES = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'image/jpeg',
+      'image/png',
+      'image/gif',
+      'text/plain',
+    ];
+
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      setFormStatus({
+        type: 'error',
+        msg: 'Invalid file type. Please upload: PDF, DOC, DOCX, JPG, PNG, GIF, or TXT.',
+      });
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('applicantName', applicantName);
+      formData.append('applicantEmail', applicantEmail);
+
+      const response = await fetch('/api/upload-resume', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Upload failed');
+      }
+
+      const data = await response.json();
+      setResumeUrl(data.url);
+      return data.url;
+    } catch (error) {
+      console.error('Upload error:', error);
+      setFormStatus({
+        type: 'error',
+        msg: `Upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      });
+      return null;
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -100,6 +166,7 @@ const CareersPage: FC = () => {
     const phone = (form.elements.namedItem('phone') as HTMLInputElement).value.trim();
     const position = (form.elements.namedItem('position') as HTMLSelectElement).value;
     const coverLetter = (form.elements.namedItem('coverLetter') as HTMLTextAreaElement).value.trim();
+    const resumeFile = (form.elements.namedItem('resume') as HTMLInputElement).files?.[0];
 
     // Validate form
     const newErrors: FormErrors = {};
@@ -113,13 +180,23 @@ const CareersPage: FC = () => {
     if (Object.keys(newErrors).length > 0) return;
 
     setIsSubmitting(true);
+    setFormStatus(null);
+    
     try {
+      // Upload resume if provided
+      let uploadedResumeUrl = '';
+      if (resumeFile) {
+        uploadedResumeUrl = await handleFileUpload(resumeFile, fullName, email) || '';
+      }
+
+      // Add job application to Firestore
       await addDoc(collection(firestore, 'jobApplications'), {
         fullName,
         email,
         phone,
         position,
         coverLetter,
+        resumeUrl: uploadedResumeUrl,
         status: 'pending',
         statusUpdatedAt: null,
         emailSentAt: null,
@@ -131,8 +208,10 @@ const CareersPage: FC = () => {
       setSelectedPosition('');
       setSelectedFileName('');
       setSelectedFileSize(0);
+      setResumeUrl('');
       setErrors({});
-    } catch {
+    } catch (error) {
+      console.error('Form submission error:', error);
       setFormStatus({ type: 'error', msg: 'Something went wrong. Please try again later.' });
     } finally {
       setIsSubmitting(false);
@@ -320,12 +399,13 @@ const CareersPage: FC = () => {
                 {errors.position && <span id="position-err" className="form-error" role="alert">{errors.position}</span>}
               </div>
               <div className="form-group">
-                <label htmlFor="resume">Resume / CV (email to <a href="mailto:hr@lifewood.com">hr@lifewood.com</a>)</label>
+                <label htmlFor="resume">Resume / CV (Optional)</label>
                 <input 
                   type="file" 
                   id="resume" 
                   name="resume" 
                   accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.txt"
+                  disabled={isUploading}
                   onChange={(e) => {
                     const file = e.currentTarget.files?.[0];
                     if (file) {
@@ -334,6 +414,7 @@ const CareersPage: FC = () => {
                     } else {
                       setSelectedFileName('');
                       setSelectedFileSize(0);
+                      setResumeUrl('');
                     }
                   }}
                 />
@@ -343,6 +424,8 @@ const CareersPage: FC = () => {
                     {selectedFileSize > 10 * 1024 * 1024 && (
                       <span style={{ color: '#e74c3c', fontWeight: 'bold' }}> ⚠️ Exceeds 10MB limit</span>
                     )}
+                    {isUploading && <span style={{ color: '#D4A017', fontWeight: 'bold' }}> ⏳ Uploading...</span>}
+                    {resumeUrl && <span style={{ color: '#27ae60', fontWeight: 'bold' }}> ✓ Uploaded</span>}
                   </small>
                 )}
               </div>
@@ -350,8 +433,8 @@ const CareersPage: FC = () => {
                 <label htmlFor="coverLetter">Cover Letter</label>
                 <textarea id="coverLetter" name="coverLetter" rows={5} />
               </div>
-              <button type="submit" className="form-btn" disabled={isSubmitting}>
-                {isSubmitting ? 'Submitting...' : 'Submit Application'} <i className="fas fa-paper-plane" />
+              <button type="submit" className="form-btn" disabled={isSubmitting || isUploading}>
+                {isSubmitting ? 'Submitting...' : isUploading ? 'Uploading Resume...' : 'Submit Application'} <i className="fas fa-paper-plane" />
               </button>
               {formStatus && (
                 <div className={`form-status ${formStatus.type}`}>{formStatus.msg}</div>
