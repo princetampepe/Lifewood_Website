@@ -102,61 +102,77 @@ function buildEmailHTML({ applicantName, position, status, applicationDate }) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>${badgeText} — Lifewood</title>
 </head>
-<body style="margin:0;padding:0;background:#f9f9f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sans-serif;color:#333;">
-  <div style="max-width:560px;margin:0 auto;padding:20px;">
+<body style="margin:0;padding:0;background:#f4f6f5;font-family:'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+  <div style="max-width:600px;margin:0 auto;padding:40px 20px;">
 
-    <!-- Clean Card -->
-    <div style="background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+    <!-- Card -->
+    <div style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(26,58,42,0.08);">
 
-      <!-- Header with Logo Only -->
-      <div style="padding:48px 30px 40px;text-align:center;border-bottom:1px solid #f0f0f0;">
-        <img src="https://lifewoodwebsite.com/lifewood%20official%20logo/use%20this.png" alt="Lifewood" style="max-width:240px;height:auto;display:block;margin:0 auto;" />
+      <!-- Header Banner -->
+      <div style="background:linear-gradient(135deg,#1A3A2A 0%,#0D2A1E 100%);padding:32px 40px;text-align:center;">
+        <h1 style="margin:0 0 8px;font-size:22px;font-weight:800;color:#F5F1EB;letter-spacing:0.5px;">
+          LIFEWOOD
+        </h1>
+        <p style="margin:0;font-size:13px;color:rgba(245,241,235,0.6);letter-spacing:1px;text-transform:uppercase;">
+          Data Technology
+        </p>
       </div>
 
       <!-- Status Badge -->
-      <div style="text-align:center;padding:32px 30px 0;">
-        <span style="display:inline-block;background:${badgeColor};color:#fff;padding:10px 28px;border-radius:50px;font-size:11px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;">
+      <div style="text-align:center;padding:28px 40px 0;">
+        <span style="display:inline-block;background:${badgeColor};color:#fff;padding:6px 20px;border-radius:50px;font-size:13px;font-weight:700;letter-spacing:0.5px;">
           ${badgeText}
         </span>
       </div>
 
       <!-- Body Content -->
-      <div style="padding:32px 30px;">
+      <div style="padding:24px 40px 32px;">
         ${bodyContent}
       </div>
 
-      <!-- Details Box -->
-      <div style="background:#fafafa;padding:20px 30px;border-top:1px solid #f0f0f0;">
-        <table style="width:100%;font-size:13px;" cellpadding="0" cellspacing="0">
-          <tr style="border-bottom:1px solid #f0f0f0;">
-            <td style="padding:8px 0;font-weight:600;color:#555;">Position</td>
-            <td style="padding:8px 0;text-align:right;color:#333;">${position}</td>
-          </tr>
-          <tr style="border-bottom:1px solid #f0f0f0;">
-            <td style="padding:8px 0;font-weight:600;color:#555;">Applied</td>
-            <td style="padding:8px 0;text-align:right;color:#333;">${dateStr}</td>
+      <!-- Application Details -->
+      <div style="background:#faf9f7;padding:20px 40px;border-top:1px solid #eee;">
+        <table style="width:100%;font-size:13px;color:#555;" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="padding:4px 0;font-weight:600;color:#1A3A2A;">Position:</td>
+            <td style="padding:4px 0;text-align:right;">${position}</td>
           </tr>
           <tr>
-            <td style="padding:8px 0;font-weight:600;color:#555;">Status</td>
-            <td style="padding:8px 0;text-align:right;color:${badgeColor};font-weight:700;">
-              ${isAccepted ? 'Accepted' : 'Not Selected'}
+            <td style="padding:4px 0;font-weight:600;color:#1A3A2A;">Applied:</td>
+            <td style="padding:4px 0;text-align:right;">${dateStr}</td>
+          </tr>
+          <tr>
+            <td style="padding:4px 0;font-weight:600;color:#1A3A2A;">Status:</td>
+            <td style="padding:4px 0;text-align:right;">
+              <span style="color:${badgeColor};font-weight:700;">
+                ${isAccepted ? 'Accepted' : 'Not Selected'}
+              </span>
             </td>
           </tr>
         </table>
       </div>
 
       <!-- Footer -->
-      <div style="padding:24px 30px;text-align:center;border-top:1px solid #f0f0f0;background:#fafafa;font-size:12px;">
-        <p style="margin:0 0 8px;">
-          <a href="mailto:hr@lifewoodwebsite.com" style="color:#D4A017;text-decoration:none;font-weight:600;">hr@lifewoodwebsite.com</a>
-          &nbsp;•&nbsp;
-          <a href="https://lifewoodwebsite.com" style="color:#D4A017;text-decoration:none;font-weight:600;">lifewoodwebsite.com</a>
+      <div style="padding:24px 40px;text-align:center;border-top:1px solid #eee;">
+        <p style="margin:0 0 8px;font-size:14px;font-weight:600;color:#1A3A2A;">
+          Lifewood Data Technology
         </p>
-        <p style="margin:0;color:#999;font-size:11px;">
-          This is an automated notification from Lifewood.
+        <p style="margin:0;font-size:12px;color:#999;line-height:1.6;">
+          Empowering businesses with AI-powered data solutions across 30+ countries.
+          <br />
+          <a href="mailto:hr@lifewoodwebsite.com" style="color:#D4A017;text-decoration:none;">hr@lifewoodwebsite.com</a>
+          &nbsp;&middot;&nbsp;
+          <a href="https://lifewoodwebsite.com" style="color:#D4A017;text-decoration:none;">lifewoodwebsite.com</a>
         </p>
       </div>
     </div>
+
+    <!-- Unsubscribe / Legal -->
+    <p style="text-align:center;font-size:11px;color:#aaa;margin:20px 0 0;line-height:1.6;">
+      This is an automated notification from Lifewood regarding your job application.
+      <br />
+      If you did not apply for a position at Lifewood, please disregard this email.
+    </p>
   </div>
 </body>
 </html>
