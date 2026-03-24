@@ -164,7 +164,7 @@ const ProfileModal: FC<{ user: User | null; onClose: () => void }> = ({ user, on
 const AdminDashboardPage: FC = () => {
   const { logout, user } = useAuth();
 
-  const [section, setSection] = useState<'contacts' | 'applications'>('contacts');
+  const [section, setSection] = useState<'contacts' | 'applications' | 'processed'>('contacts');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
 
@@ -189,6 +189,7 @@ const AdminDashboardPage: FC = () => {
     | { type: 'reply-contact'; data: ContactMessage }
     | { type: 'create-app' }
     | { type: 'view-app'; data: JobApplication }
+    | { type: 'review-app'; data: JobApplication }
     | null
   >(null);
 
@@ -268,6 +269,18 @@ const AdminDashboardPage: FC = () => {
     return counts;
   }, [applications]);
 
+  const applicationsProcessed = useMemo(() => {
+    let result = applications.filter((a) => a.status !== 'pending');
+    if (appSearch.trim()) {
+      const q = appSearch.toLowerCase();
+      result = result.filter((a) =>
+        a.fullName.toLowerCase().includes(q) || a.email.toLowerCase().includes(q) ||
+        a.position.toLowerCase().includes(q) || a.phone.toLowerCase().includes(q),
+      );
+    }
+    return appSort === 'oldest' ? [...result].reverse() : result;
+  }, [applications, appSearch, appSort]);
+
   const toggleExpand = (id: string) => setExpandedCards((prev) => {
     const next = new Set(prev);
     next.has(id) ? next.delete(id) : next.add(id);
@@ -301,46 +314,42 @@ const AdminDashboardPage: FC = () => {
 
   /* ── Accept / Reject ── */
   const updateApplicationStatus = useCallback((app: JobApplication, newStatus: 'accepted' | 'rejected') => {
-    const posTitle = getPositionTitle(app.position);
-    askConfirm({
-      title: newStatus === 'accepted' ? 'Accept Application' : 'Reject Application',
-      danger: newStatus === 'rejected',
-      message: `${newStatus === 'accepted' ? 'Accept' : 'Reject'} ${app.fullName}'s application for ${posTitle}? An email notification will be sent to ${app.email}.`,
-      confirmLabel: newStatus === 'accepted' ? 'Yes, Accept' : 'Yes, Reject',
-      onConfirm: async () => {
-        setConfirmState(null);
-        setUpdatingApps((prev) => new Set(prev).add(app.id));
-        const loadingToast = toast.loading(`${newStatus === 'accepted' ? 'Accepting' : 'Rejecting'} and sending email…`);
-        try {
-          await updateDoc(doc(firestore, 'jobApplications', app.id), { status: newStatus, statusUpdatedAt: serverTimestamp() });
-          const emailRes = await fetch('/api/send-email', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              applicantName: app.fullName, applicantEmail: app.email,
-              position: posTitle, status: newStatus,
-              applicationDate: app.createdAt?.toDate().toISOString() ?? null,
-            }),
-          });
-          const emailData = await emailRes.json();
-          if (!emailRes.ok) {
-            toast.dismiss(loadingToast);
-            toast.error(`Application ${newStatus} but email failed: ${emailData.details || emailData.error || 'Unknown error'}`, { duration: 8000 });
-            return;
-          }
-          await updateDoc(doc(firestore, 'jobApplications', app.id), { emailSentAt: serverTimestamp() });
-          toast.dismiss(loadingToast);
-          toast.success(`Application ${newStatus}! Email sent to ${app.email}.`, { duration: 5000 });
-        } catch {
-          toast.dismiss(loadingToast);
-          toast.error('Failed to update application status.');
-        } finally {
-          setUpdatingApps((prev) => { const next = new Set(prev); next.delete(app.id); return next; });
-        }
-      },
-    });
+    setModal({ type: 'review-app', data: { ...app, _reviewStatus: newStatus as any } });
   }, []);
 
-  const navTo = (s: 'contacts' | 'applications') => { setSection(s); setSidebarOpen(false); };
+  const confirmApplicationStatus = useCallback(async (app: JobApplication, newStatus: 'accepted' | 'rejected') => {
+    const posTitle = getPositionTitle(app.position);
+    setModal(null);
+    setUpdatingApps((prev) => new Set(prev).add(app.id));
+    const loadingToast = toast.loading(`${newStatus === 'accepted' ? 'Accepting' : 'Rejecting'} and sending email…`);
+    try {
+      await updateDoc(doc(firestore, 'jobApplications', app.id), { status: newStatus, statusUpdatedAt: serverTimestamp() });
+      const emailRes = await fetch('/api/send-email', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          applicantName: app.fullName, applicantEmail: app.email,
+          position: posTitle, status: newStatus,
+          applicationDate: app.createdAt?.toDate().toISOString() ?? null,
+        }),
+      });
+      const emailData = await emailRes.json();
+      if (!emailRes.ok) {
+        toast.dismiss(loadingToast);
+        toast.error(`Application ${newStatus} but email failed: ${emailData.details || emailData.error || 'Unknown error'}`, { duration: 8000 });
+        return;
+      }
+      await updateDoc(doc(firestore, 'jobApplications', app.id), { emailSentAt: serverTimestamp() });
+      toast.dismiss(loadingToast);
+      toast.success(`Application ${newStatus}! Email sent to ${app.email}.`, { duration: 5000 });
+    } catch {
+      toast.dismiss(loadingToast);
+      toast.error('Failed to update application status.');
+    } finally {
+      setUpdatingApps((prev) => { const next = new Set(prev); next.delete(app.id); return next; });
+    }
+  }, []);
+
+  const navTo = (s: 'contacts' | 'applications' | 'processed') => { setSection(s); setSidebarOpen(false); };
 
   /* ── Render ── */
   return (
@@ -371,6 +380,11 @@ const AdminDashboardPage: FC = () => {
             <span>Job Applications</span>
             {statusCounts.pending > 0 && <span className="admin-nav-badge">{statusCounts.pending}</span>}
           </button>
+          <button className={`admin-nav-item ${section === 'processed' ? 'active' : ''}`} onClick={() => navTo('processed')}>
+            <i className="fas fa-check-double" />
+            <span>Processed</span>
+            {(statusCounts.accepted + statusCounts.rejected) > 0 && <span className="admin-nav-count">{statusCounts.accepted + statusCounts.rejected}</span>}
+          </button>
         </nav>
 
         <div className="admin-sidebar-footer">
@@ -395,12 +409,17 @@ const AdminDashboardPage: FC = () => {
             <i className="fas fa-bars" />
           </button>
           <h1 className="admin-topbar-title">
-            {section === 'contacts' ? 'Contact Messages' : 'Job Applications'}
+            {section === 'contacts' ? 'Contact Messages' : section === 'applications' ? 'Job Applications' : 'Processed Applications'}
           </h1>
           <div className="admin-topbar-stats">
             {section === 'applications' ? (
               <>
                 <span className="admin-topbar-stat pending">{statusCounts.pending} pending</span>
+                <span className="admin-topbar-stat accepted">{statusCounts.accepted} accepted</span>
+                <span className="admin-topbar-stat rejected">{statusCounts.rejected} rejected</span>
+              </>
+            ) : section === 'processed' ? (
+              <>
                 <span className="admin-topbar-stat accepted">{statusCounts.accepted} accepted</span>
                 <span className="admin-topbar-stat rejected">{statusCounts.rejected} rejected</span>
               </>
@@ -600,6 +619,67 @@ const AdminDashboardPage: FC = () => {
             </div>
           </div>
         )}
+
+        {/* ── PROCESSED APPLICATIONS ── */}
+        {section === 'processed' && (
+          <div className="admin-section">
+            <div className="admin-section-toolbar">
+              <div className="admin-search-wrap">
+                <i className="fas fa-search" />
+                <input type="text" placeholder="Search processed applications…" value={appSearch} onChange={(e) => setAppSearch(e.target.value)} />
+              </div>
+              <select className="admin-sort-select" value={appSort} onChange={(e) => setAppSort(e.target.value as SortOption)}>
+                <option value="newest">Newest first</option>
+                <option value="oldest">Oldest first</option>
+              </select>
+            </div>
+
+            {appsLoading && <div className="admin-loading"><div className="page-loader-spinner" /> Loading…</div>}
+            {appsError && <div className="form-status error">{appsError}</div>}
+            {!appsLoading && !appsError && applicationsProcessed.length === 0 && (
+              <div className="admin-empty"><i className="fas fa-inbox" /><p>No processed applications yet.</p></div>
+            )}
+
+            <div className="admin-cards">
+              {applicationsProcessed.map((a) => (
+                <div key={a.id} className={`admin-record-card app-status-${a.status}`} onClick={() => setModal({ type: 'view-app', data: a })}>
+                  <div className="admin-record-header">
+                    <div className="admin-record-identity">
+                      <Avatar name={a.fullName} />
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                          <h3>{a.fullName}</h3>
+                          <span className={`app-status-badge status-${a.status}`}>
+                            {a.status === 'accepted' && <><i className="fas fa-check-circle" /> Accepted</>}
+                            {a.status === 'rejected' && <><i className="fas fa-times-circle" /> Rejected</>}
+                          </span>
+                        </div>
+                        <span className="admin-record-email">{a.email}</span>
+                      </div>
+                    </div>
+                    <span className="admin-record-date" title={fmtDate(a.statusUpdatedAt)}>{relativeTime(a.statusUpdatedAt)}</span>
+                  </div>
+
+                  {a.phone && <p className="admin-record-meta"><i className="fas fa-phone" /> {a.phone}</p>}
+                  <p className="admin-record-meta"><i className="fas fa-briefcase" /> {getPositionTitle(a.position)}</p>
+
+                  {a.status !== 'pending' && (
+                    <p className="admin-email-status">
+                      <i className="fas fa-paper-plane" />
+                      {a.emailSentAt ? `Email sent ${relativeTime(a.emailSentAt)}` : 'Email not delivered'}
+                    </p>
+                  )}
+
+                  <div className="admin-record-actions" onClick={(e) => e.stopPropagation()}>
+                    <button className="admin-action-btn delete" onClick={() => deleteApplication(a.id)}>
+                      <i className="fas fa-trash" /> Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </main>
 
       {/* ── Confirm Modal ── */}
@@ -622,6 +702,9 @@ const AdminDashboardPage: FC = () => {
             )}
             {modal.type === 'view-app' && (
               <AppDetailView data={modal.data} />
+            )}
+            {modal.type === 'review-app' && (
+              <ApplicationReviewDialog data={modal.data} onConfirm={confirmApplicationStatus} onCancel={() => setModal(null)} />
             )}
             {modal.type === 'create-contact' && (
               <ContactForm onDone={() => setModal(null)} />
@@ -726,6 +809,107 @@ const AppDetailView: FC<{ data: JobApplication }> = ({ data }) => (
     )}
   </div>
 );
+
+/* ================================================================
+   APPLICATION REVIEW DIALOG
+   ================================================================ */
+const ApplicationReviewDialog: FC<{ data: any; onConfirm: (data: JobApplication, status: 'accepted' | 'rejected') => void; onCancel: () => void }> = ({ data, onConfirm, onCancel }) => {
+  const reviewStatus = (data as any)._reviewStatus as 'accepted' | 'rejected';
+  const isAccepting = reviewStatus === 'accepted';
+  const posTitle = getPositionTitle(data.position);
+  const [confirming, setConfirming] = useState(false);
+
+  const handleConfirm = async () => {
+    setConfirming(true);
+    await onConfirm(data, reviewStatus);
+    setConfirming(false);
+  };
+
+  return (
+    <div className="admin-detail-view">
+      <div style={{ backgroundColor: isAccepting ? '#f0f8f4' : '#faf4f4', borderRadius: '12px', padding: '16px', marginBottom: '20px', border: `2px solid ${isAccepting ? '#27ae60' : '#e74c3c'}` }}>
+        <h3 style={{ margin: '0 0 8px', display: 'flex', alignItems: 'center', gap: '8px', color: isAccepting ? '#27ae60' : '#c0392b' }}>
+          <i className={`fas fa-${isAccepting ? 'check-circle' : 'times-circle'}`} />
+          {isAccepting ? 'Accept Application?' : 'Reject Application?'}
+        </h3>
+        <p style={{ margin: 0, fontSize: '14px', color: '#666' }}>
+          {isAccepting 
+            ? `You are about to accept ${data.fullName}'s application for ${posTitle}. An acceptance email will be sent to their provided address.`
+            : `You are about to reject ${data.fullName}'s application for ${posTitle}. A rejection notification email will be sent to their provided address.`
+          }
+        </p>
+      </div>
+
+      <div className="admin-detail-header">
+        <Avatar name={data.fullName} size={52} />
+        <div>
+          <h2>{data.fullName}</h2>
+          <span className={`app-status-badge status-pending`} style={{ marginTop: '4px', display: 'inline-flex' }}>
+            <i className="fas fa-clock" /> Pending Review
+          </span>
+        </div>
+      </div>
+
+      <div className="admin-detail-grid">
+        <div className="admin-detail-field">
+          <label><i className="fas fa-envelope" /> Email</label>
+          <a href={`mailto:${data.email}`} className="admin-detail-email">{data.email}</a>
+        </div>
+        {data.phone && (
+          <div className="admin-detail-field">
+            <label><i className="fas fa-phone" /> Phone</label>
+            <p>{data.phone}</p>
+          </div>
+        )}
+        <div className="admin-detail-field">
+          <label><i className="fas fa-briefcase" /> Position</label>
+          <p>{posTitle}</p>
+        </div>
+        <div className="admin-detail-field">
+          <label><i className="fas fa-calendar" /> Applied</label>
+          <p>{fmtDate(data.createdAt)}</p>
+        </div>
+      </div>
+
+      {data.coverLetter && (
+        <div className="admin-detail-field" style={{ marginTop: '0.5rem' }}>
+          <label><i className="fas fa-file-alt" /> Cover Letter</label>
+          <p className="admin-detail-message">{data.coverLetter}</p>
+        </div>
+      )}
+
+      {data.resumeUrl && (
+        <div className="admin-detail-field" style={{ marginTop: '0.5rem' }}>
+          <label><i className="fas fa-file" /> Resume / CV</label>
+          <a href={data.resumeUrl} target="_blank" rel="noopener noreferrer" className="admin-file-link">
+            <i className="fas fa-download" /> Download Resume
+          </a>
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: '10px', marginTop: '24px', flexWrap: 'wrap' }}>
+        <button 
+          onClick={onCancel} 
+          disabled={confirming}
+          style={{ flex: 1, minWidth: '120px', padding: '10px 16px', backgroundColor: '#f0f0f0', color: '#333', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px', fontWeight: '600', transition: 'background 0.2s' }}
+          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#e0e0e0')}
+          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#f0f0f0')}
+        >
+          Go Back
+        </button>
+        <button 
+          onClick={handleConfirm} 
+          disabled={confirming}
+          style={{ flex: 1, minWidth: '120px', padding: '10px 16px', backgroundColor: isAccepting ? '#27ae60' : '#e74c3c', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px', fontWeight: '600', transition: 'background 0.2s', opacity: confirming ? 0.7 : 1 }}
+          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = isAccepting ? '#229954' : '#c0392b')}
+          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = isAccepting ? '#27ae60' : '#e74c3c')}
+        >
+          {confirming ? 'Processing…' : (isAccepting ? 'Yes, Accept' : 'Yes, Reject')}
+        </button>
+      </div>
+    </div>
+  );
+};
 
 /* ================================================================
    CONTACT REPLY FORM
