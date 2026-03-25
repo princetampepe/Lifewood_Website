@@ -1,25 +1,14 @@
 /**
  * Vercel Serverless Function — /api/upload-resume
- * Handles resume/CV file uploads to Cloudinary.
- * Requires CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET in env vars.
+ * Handles resume/CV file uploads to Cloudinary with unsigned uploads.
+ * Requires CLOUDINARY_CLOUD_NAME and CLOUDINARY_UPLOAD_PRESET in env vars.
  */
 
-import { v2 as cloudinary } from 'cloudinary';
+import cloudinary from 'cloudinary';
 import busboy from 'busboy';
-import { Readable } from 'stream';
 
-// Configure Cloudinary
 const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
-const apiKey = process.env.CLOUDINARY_API_KEY;
-const apiSecret = process.env.CLOUDINARY_API_SECRET;
-
-if (cloudName && apiKey && apiSecret) {
-  cloudinary.config({
-    cloud_name: cloudName,
-    api_key: apiKey,
-    api_secret: apiSecret,
-  });
-}
+const uploadPreset = process.env.CLOUDINARY_UPLOAD_PRESET || 'ml_default';
 
 export default async function handler(req, res) {
   // Set CORS headers
@@ -38,22 +27,14 @@ export default async function handler(req, res) {
 
   try {
     // Validate Cloudinary is configured
-    if (!cloudName || !apiKey || !apiSecret) {
-      console.error('[Upload] Missing Cloudinary config', {
-        cloudName: !!cloudName,
-        apiKey: !!apiKey,
-        apiSecret: !!apiSecret,
-      });
+    if (!cloudName) {
+      console.error('[Upload] Missing Cloudinary cloud name');
       return res.status(500).json({
-        error: 'Server configuration error - Cloudinary not set up',
+        error: 'Server configuration error - Cloud name not set',
       });
     }
 
-    console.log('[Upload] Cloudinary config loaded:', {
-      cloud_name: cloudName,
-      api_key: apiKey.substring(0, 5) + '...',
-      api_secret: apiSecret.substring(0, 5) + '...',
-    });
+    console.log('[Upload] Using cloud:', cloudName, 'preset:', uploadPreset);
 
     return new Promise((resolve) => {
       let applicantName = '';
@@ -126,47 +107,56 @@ export default async function handler(req, res) {
 
           console.log('[Upload] Starting Cloudinary upload for:', applicantEmail);
 
-          // Upload to Cloudinary
-          const uploadStream = cloudinary.uploader.upload_stream(
-            {
-              folder: `lifewood/resumes/${new Date().getFullYear()}`,
-              resource_type: 'auto',
-              public_id: `${applicantEmail}-${Date.now()}`,
-            },
-            (error, result) => {
-              if (error) {
-                console.error('[Upload] Cloudinary error:', {
-                  message: error.message,
-                  code: error.code,
-                  status: error.status,
-                  http_code: error.http_code,
-                  full: error.toString(),
-                });
-                return resolve(
-                  res.status(500).json({
-                    error: 'Upload to Cloudinary failed',
-                    details: error.message,
-                    code: error.code,
-                  })
-                );
-              }
+          // Use unsigned upload API
+          const uploadUrl = `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`;
+          const publicId = `${applicantEmail}-${Date.now()}`;
+          
+          // Create FormData for multipart upload
+          const formData = new FormData();
+          formData.append('file', new Blob([fileBuffer], { type: fileMimetype }), fileName);
+          formData.append('upload_preset', uploadPreset);
+          formData.append('folder', `lifewood/resumes/${new Date().getFullYear()}`);
+          formData.append('public_id', publicId);
 
-              console.log('[Upload] Success:', result.secure_url);
+          try {
+            const uploadRes = await fetch(uploadUrl, {
+              method: 'POST',
+              body: formData,
+            });
+
+            if (!uploadRes.ok) {
+              const errorData = await uploadRes.json();
+              console.error('[Upload] Cloudinary error:', errorData);
               return resolve(
-                res.status(200).json({
-                  success: true,
-                  url: result.secure_url,
-                  publicId: result.public_id,
-                  fileSize: result.bytes,
-                  uploadedAt: new Date().toISOString(),
+                res.status(500).json({
+                  error: 'Upload to Cloudinary failed',
+                  details: errorData.error?.message || 'Unknown error',
                 })
               );
             }
-          );
 
-          // Pipe buffer to upload stream
-          const bufferStream = Readable.from([fileBuffer]);
-          bufferStream.pipe(uploadStream);
+            const result = await uploadRes.json();
+            const publicUrl = `https://res.cloudinary.com/${cloudName}/image/upload/v${result.version}/${result.public_id}.${result.format}`;
+            
+            console.log('[Upload] Success:', publicUrl);
+            return resolve(
+              res.status(200).json({
+                success: true,
+                url: publicUrl,
+                publicId: result.public_id,
+                fileSize: result.bytes,
+                uploadedAt: new Date().toISOString(),
+              })
+            );
+          } catch (uploadError) {
+            console.error('[Upload] Upload error:', uploadError);
+            return resolve(
+              res.status(500).json({
+                error: 'Upload to Cloudinary failed',
+                details: uploadError instanceof Error ? uploadError.message : String(uploadError),
+              })
+            );
+          }
         } catch (error) {
           console.error('[Upload] Unexpected error:', error);
           return resolve(
