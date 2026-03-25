@@ -2923,6 +2923,7 @@ textarea:focus-visible,
   background: linear-gradient(135deg, #f4f8f7 0%, #efe8e0 100%);
   position: relative;
   overflow-x: hidden;
+  overflow-y: auto;
 }
 .admin-main::before {
   content: '';

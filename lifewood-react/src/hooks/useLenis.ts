@@ -33,6 +33,9 @@ export function useLenis(options: LenisOptions | null = {}) {
       duration: options.duration ?? 1.2,
       orientation: options.orientation ?? 'vertical',
       smoothWheel: options.smoothWheel ?? true,
+      prevent: (node: any) => {
+        return node.classList && node.classList.contains('lw-no-scroll');
+      }
     });
 
     lenisRef.current = lenis;
@@ -46,6 +49,16 @@ export function useLenis(options: LenisOptions | null = {}) {
       rafId.current = requestAnimationFrame(raf);
     }
     rafId.current = requestAnimationFrame(raf);
+
+    // Force Lenis to handle wheel events by re-initializing if needed
+    try {
+      // Dispatch a wheel event to ensure Lenis event listeners are attached
+      if (document.body) {
+        (lenis as any).onDocument?.({ preventDefault: () => {} } as any);
+      }
+    } catch (e) {
+      console.warn('Lenis initialization:', e);
+    }
 
     return () => {
       cancelAnimationFrame(rafId.current);
