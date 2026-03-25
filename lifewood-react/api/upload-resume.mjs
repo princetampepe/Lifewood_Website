@@ -106,8 +106,9 @@ export default async function handler(req, res) {
 
           console.log('[Upload] Starting Cloudinary upload for:', applicantEmail);
 
-          // Use unsigned upload API
-          const uploadUrl = `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`;
+          // Use unsigned upload API; choose endpoint based on type to ensure PDFs/docs deliver correctly
+          const isImage = fileMimetype.startsWith('image/');
+          const uploadUrl = `https://api.cloudinary.com/v1_1/${cloudName}/${isImage ? 'image' : 'raw'}/upload`;
           const publicId = `${applicantEmail}-${Date.now()}`;
           
           // Create FormData for multipart upload
