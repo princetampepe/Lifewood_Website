@@ -3227,13 +3227,13 @@ textarea:focus-visible,
   padding: 0.2rem 0.65rem; border-radius: 50px;
   font-size: 0.7rem; font-weight: 700; letter-spacing: 0.3px; white-space: nowrap;
 }
-.app-status-badge.status-pending { background: rgba(212,160,23,0.12); color: #b8860b; border: 1px solid rgba(212,160,23,0.25); }
+.app-status-badge.status-pending { background: #fff3d9; color: #8b5a00; border: 1px solid #f0b323; }
 .app-status-badge.status-accepted { background: rgba(39,174,96,0.1); color: #1e8449; border: 1px solid rgba(39,174,96,0.25); }
 .app-status-badge.status-rejected { background: rgba(231,76,60,0.08); color: #c0392b; border: 1px solid rgba(231,76,60,0.2); }
 .app-status-badge i { font-size: 0.65rem; }
 
 /* Left border by status */
-.admin-record-card.app-status-pending { border-left: 5px solid #D4A017; }
+.admin-record-card.app-status-pending { border-left: 5px solid #f0b323; }
 .admin-record-card.app-status-accepted { border-left: 5px solid #27ae60; }
 .admin-record-card.app-status-rejected { border-left: 5px solid #e74c3c; }
 
