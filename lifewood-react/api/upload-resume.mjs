@@ -4,7 +4,6 @@
  * Requires CLOUDINARY_CLOUD_NAME and CLOUDINARY_UPLOAD_PRESET in env vars.
  */
 
-import cloudinary from 'cloudinary';
 import busboy from 'busboy';
 
 const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
@@ -117,6 +116,7 @@ export default async function handler(req, res) {
           formData.append('upload_preset', uploadPreset);
           formData.append('folder', `lifewood/resumes/${new Date().getFullYear()}`);
           formData.append('public_id', publicId);
+          formData.append('type', 'upload');
 
           try {
             const uploadRes = await fetch(uploadUrl, {
@@ -136,14 +136,20 @@ export default async function handler(req, res) {
             }
 
             const result = await uploadRes.json();
-            const publicUrl = `https://res.cloudinary.com/${cloudName}/image/upload/v${result.version}/${result.public_id}.${result.format}`;
-            
-            console.log('[Upload] Success:', publicUrl);
+            const publicUrl = result.secure_url;
+
+            console.log('[Upload] Success:', {
+              publicUrl,
+              resourceType: result.resource_type,
+              deliveryType: result.type,
+            });
             return resolve(
               res.status(200).json({
                 success: true,
                 url: publicUrl,
                 publicId: result.public_id,
+                resourceType: result.resource_type,
+                deliveryType: result.type,
                 fileSize: result.bytes,
                 uploadedAt: new Date().toISOString(),
               })
