@@ -173,6 +173,7 @@ const AdminDashboardPage: FC = () => {
   const [contactsError, setContactsError] = useState('');
   const [contactSearch, setContactSearch] = useState('');
   const [contactSort, setContactSort] = useState<SortOption>('newest');
+  const [contactLimit, setContactLimit] = useState(8);
 
   const [applications, setApplications] = useState<JobApplication[]>([]);
   const [appsLoading, setAppsLoading] = useState(true);
@@ -182,6 +183,7 @@ const AdminDashboardPage: FC = () => {
   const [appSort, setAppSort] = useState<SortOption>('newest');
 
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
+  const [appLimit, setAppLimit] = useState(8);
 
   const [modal, setModal] = useState<
     | { type: 'create-contact' }
@@ -250,6 +252,8 @@ const AdminDashboardPage: FC = () => {
     return contactSort === 'oldest' ? [...result].reverse() : result;
   }, [contacts, contactSearch, contactSort]);
 
+  const visibleContacts = useMemo(() => filteredContacts.slice(0, contactLimit), [filteredContacts, contactLimit]);
+
   const filteredApps = useMemo(() => {
     let result = applications;
     // Only show pending applications in the Job Applications section
@@ -261,8 +265,19 @@ const AdminDashboardPage: FC = () => {
         a.position.toLowerCase().includes(q) || a.phone.toLowerCase().includes(q),
       );
     }
-    return appSort === 'oldest' ? [...result].reverse() : result;
+    const ordered = appSort === 'oldest' ? [...result].reverse() : result;
+    return ordered;
   }, [applications, appSearch, appSort]);
+
+  const visibleApps = useMemo(() => filteredApps.slice(0, appLimit), [filteredApps, appLimit]);
+
+  useEffect(() => {
+    setContactLimit(8);
+  }, [contactSearch, contactSort]);
+
+  useEffect(() => {
+    setAppLimit(8);
+  }, [appSearch, appSort]);
 
   const statusCounts = useMemo(() => {
     const counts = { pending: 0, accepted: 0, rejected: 0 };
@@ -533,7 +548,7 @@ const AdminDashboardPage: FC = () => {
             )}
 
             <div className="admin-cards">
-              {filteredContacts.map((c) => (
+              {visibleContacts.map((c) => (
                 <div key={c.id} className="admin-record-card" onClick={() => setModal({ type: 'view-contact', data: c })}>
                   <div className="admin-record-header">
                     <div className="admin-record-identity">
@@ -560,6 +575,14 @@ const AdminDashboardPage: FC = () => {
                 </div>
               ))}
             </div>
+
+            {filteredContacts.length > visibleContacts.length && (
+              <div style={{ display: 'flex', justifyContent: 'center', marginTop: '1rem' }}>
+                <button className="admin-action-btn" onClick={() => setContactLimit((n) => n + 8)}>
+                  Show more
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -587,7 +610,7 @@ const AdminDashboardPage: FC = () => {
             )}
 
             <div className="admin-cards">
-              {filteredApps.map((a) => {
+              {visibleApps.map((a) => {
                 const isUpdating = updatingApps.has(a.id);
                 return (
                   <div key={a.id} className={`admin-record-card app-status-${a.status}`} onClick={() => setModal({ type: 'view-app', data: a })}>
@@ -649,6 +672,14 @@ const AdminDashboardPage: FC = () => {
                 );
               })}
             </div>
+
+            {filteredApps.length > visibleApps.length && (
+              <div style={{ display: 'flex', justifyContent: 'center', marginTop: '1rem' }}>
+                <button className="admin-action-btn" onClick={() => setAppLimit((n) => n + 8)}>
+                  Show more
+                </button>
+              </div>
+            )}
           </div>
         )}
 
