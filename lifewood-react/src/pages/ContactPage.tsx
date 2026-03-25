@@ -80,7 +80,8 @@ const ContactPage: FC = () => {
       const name = sanitize((form.elements.namedItem('name') as HTMLInputElement).value);
       const email = sanitize((form.elements.namedItem('email') as HTMLInputElement).value);
       const phone = sanitize((form.elements.namedItem('phone') as HTMLInputElement)?.value || '');
-      const subject = sanitize((form.elements.namedItem('subject') as HTMLInputElement).value);
+      const subjectEl = form.elements.namedItem('subject') as HTMLInputElement | null;
+      const subject = sanitize(subjectEl?.value || 'General inquiry');
       const message = sanitize((form.elements.namedItem('message') as HTMLTextAreaElement).value);
 
       await addDoc(collection(firestore, 'contactMessages'), {
@@ -95,8 +96,10 @@ const ContactPage: FC = () => {
       setFormStatus({ type: 'success', msg: 'Message sent successfully! We will get back to you soon.' });
       form.reset();
       setErrors({});
-    } catch {
-      setFormStatus({ type: 'error', msg: 'Something went wrong. Please try again later.' });
+    } catch (err) {
+      console.error('Contact form submission failed', err);
+      const reason = err instanceof Error ? err.message : 'Unknown error';
+      setFormStatus({ type: 'error', msg: `Something went wrong. Please try again later. (${reason})` });
     } finally {
       setIsSubmitting(false);
       setTimeout(() => setFormStatus(null), 6000);
