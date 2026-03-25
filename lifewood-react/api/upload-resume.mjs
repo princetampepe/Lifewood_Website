@@ -116,7 +116,6 @@ export default async function handler(req, res) {
           formData.append('upload_preset', uploadPreset);
           formData.append('folder', `lifewood/resumes/${new Date().getFullYear()}`);
           formData.append('public_id', publicId);
-          formData.append('type', 'upload');
 
           try {
             const uploadRes = await fetch(uploadUrl, {
