@@ -890,7 +890,7 @@ const AppDetailView: FC<{ data: JobApplication }> = ({ data }) => (
       <div className="admin-detail-field" style={{ marginTop: '0.5rem' }}>
         <label><i className="fas fa-file" /> Resume / CV</label>
         <a href={data.resumeUrl} target="_blank" rel="noopener noreferrer" className="admin-file-link">
-          <i className="fas fa-download" /> Download Resume
+          <i className="fas fa-eye" /> View Resume
         </a>
       </div>
     )}
@@ -968,11 +968,8 @@ const ApplicationReviewDialog: FC<{ data: JobApplication; reviewStatus: 'accepte
         <div className="admin-detail-field" style={{ marginTop: '1rem' }}>
           <label><i className="fas fa-file" /> Resume / CV</label>
           <div style={{ display: 'flex', gap: '12px', marginTop: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
-            <a href={data.resumeUrl} target="_blank" rel="noopener noreferrer" className="admin-file-link" download>
-              <i className="fas fa-download" /> Download
-            </a>
-            <a href={data.resumeUrl} target="_blank" rel="noopener noreferrer" className="admin-file-link" style={{ background: 'var(--dark-serpent)' }}>
-              <i className="fas fa-eye" /> View in New Tab
+            <a href={data.resumeUrl} target="_blank" rel="noopener noreferrer" className="admin-file-link">
+              <i className="fas fa-eye" /> View Resume
             </a>
           </div>
           {data.resumeUrl.toLowerCase().includes('.pdf') && (
